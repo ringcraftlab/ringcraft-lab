@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import AppHeader from '../components/AppHeader';
 import { T } from '../theme/appTheme';
 import { filterPens, getUniqueBrands, getMinMaxLength, getMinMaxDiameter } from '../utils/penFilters';
 
@@ -7,9 +8,8 @@ const TYPES = ['万年筆', 'ボールペン'];
 
 const card = {
   background: '#fff',
-  border: '0.5px solid #efefef',
-  borderRadius: 12,
-  boxShadow: '0 2px 12px rgba(45, 55, 72, 0.05)',
+  border: `0.5px solid ${T.border}`,
+  borderRadius: 8,
 };
 
 const chipOff = {
@@ -181,7 +181,13 @@ export default function PenSearch() {
     resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
-  const rangeStyle = { width: '100%', accentColor: T.primary, display: 'block', marginBottom: 8 };
+  const rangeStyle = { width: '100%', accentColor: T.ink, display: 'block', marginBottom: 8 };
+
+  const chipOn = {
+    border: `1px solid ${T.ink}`,
+    background: T.primaryLight,
+    color: T.ink,
+  };
 
   const shell = (child) => (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: T.font, color: T.ink, background: T.sidebar }}>
@@ -201,26 +207,19 @@ export default function PenSearch() {
     return shell(
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 40 }}>
         <p style={{ color: '#a44' }}>{loadError}</p>
-        <Link to="/" style={{ color: T.primary, fontWeight: 600 }}>← ホーム</Link>
+        <Link to="/" style={{ color: T.muted, fontWeight: 500 }}>← 机</Link>
       </div>,
     );
   }
 
   return shell(
-    <main style={{ flex: 1, overflowY: 'auto', padding: 'clamp(14px, 4vw, 24px) clamp(14px, 4vw, 22px) 40px' }}>
+    <>
+      <AppHeader title="ペンを探す" subtitle="あと2mm入らない。" />
+      <main style={{ flex: 1, overflowY: 'auto', padding: 'clamp(14px, 4vw, 24px) clamp(14px, 4vw, 22px) 40px' }}>
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
-        <div style={{ marginBottom: 12 }}>
-          <Link to="/" style={{ fontSize: 13, color: T.muted, textDecoration: 'none', fontWeight: 500 }}>
-            ← ホーム
-          </Link>
-        </div>
-
-        <header style={{ marginBottom: 20 }}>
-          <h1 style={{ fontSize: 'clamp(20px, 4vw, 24px)', fontWeight: 700, margin: 0 }}>コンパクトペン検索</h1>
-          <p style={{ fontSize: 14, color: T.muted, margin: '8px 0 0 0', lineHeight: 1.5 }}>
-            全長130mm以下を、種別・ブランド・文字で絞り込み。下の表が結果です。
-          </p>
-        </header>
+        <p style={{ fontSize: 14, color: T.muted, margin: '0 0 20px', lineHeight: 1.65 }}>
+          全長130mm以下。種別・ブランド・文字で絞る。
+        </p>
 
         {/* 条件はこの1枚に集約 */}
         <section style={{ ...card, padding: '18px 16px 20px', marginBottom: 20 }}>
@@ -232,7 +231,7 @@ export default function PenSearch() {
               style={{
                 border: 'none',
                 background: 'none',
-                color: T.primary,
+                color: T.ink,
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -257,9 +256,10 @@ export default function PenSearch() {
                     ...chipOff,
                     padding: '11px 20px',
                     borderRadius: 9,
-                    border: on ? `1.5px solid ${T.primary}` : chipOff.border,
-                    background: on ? T.primary : chipOff.background,
-                    color: on ? '#fff' : T.ink,
+                    ...(on ? chipOn : {}),
+                    border: on ? chipOn.border : chipOff.border,
+                    background: on ? chipOn.background : chipOff.background,
+                    color: on ? chipOn.color : T.ink,
                     fontWeight: 700,
                     fontSize: 14,
                   }}
@@ -306,7 +306,7 @@ export default function PenSearch() {
                   background: '#fff',
                   fontSize: 12,
                   fontWeight: 600,
-                  color: T.primary,
+                  color: T.ink,
                   cursor: 'pointer',
                   fontFamily: T.font,
                 }}
@@ -325,7 +325,7 @@ export default function PenSearch() {
                 style={{
                   border: 'none',
                   background: 'none',
-                  color: T.primary,
+                  color: T.ink,
                   fontSize: 12,
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -356,9 +356,10 @@ export default function PenSearch() {
                     ...chipOff,
                     padding: '8px 8px',
                     fontSize: 12,
-                    border: on ? `1.5px solid ${T.primary}` : chipOff.border,
-                    background: on ? 'rgba(91, 127, 166, 0.12)' : chipOff.background,
-                    color: on ? T.primary : T.ink,
+                    ...(on ? chipOn : {}),
+                    border: on ? chipOn.border : chipOff.border,
+                    background: on ? chipOn.background : chipOff.background,
+                    color: on ? chipOn.color : T.ink,
                     fontWeight: on ? 700 : 500,
                   }}
                 >
@@ -383,7 +384,7 @@ export default function PenSearch() {
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 11, color: T.muted, marginBottom: 8 }}>全長（mm）</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-                <span style={{ padding: '4px 10px', borderRadius: 6, background: 'rgba(91, 127, 166, 0.12)', color: T.primary, fontWeight: 700, fontSize: 13 }}>
+                <span style={{ padding: '4px 10px', borderRadius: 6, background: T.primaryLight, color: T.ink, fontWeight: 700, fontSize: 13 }}>
                   {Math.round(filters.lengthRange[0])}〜{Math.round(filters.lengthRange[1])}
                 </span>
               </div>
@@ -392,7 +393,7 @@ export default function PenSearch() {
 
               <div style={{ fontSize: 11, color: T.muted, marginBottom: 8 }}>軸径（mm）</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ padding: '4px 10px', borderRadius: 6, background: 'rgba(91, 127, 166, 0.12)', color: T.primary, fontWeight: 700, fontSize: 13 }}>
+                <span style={{ padding: '4px 10px', borderRadius: 6, background: T.primaryLight, color: T.ink, fontWeight: 700, fontSize: 13 }}>
                   {filters.diameterRange[0]}〜{filters.diameterRange[1]}
                 </span>
               </div>
@@ -401,7 +402,7 @@ export default function PenSearch() {
             </div>
           </details>
 
-          <p style={{ fontSize: 13, fontWeight: 700, color: T.primary, margin: '14px 0 0 0' }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: T.muted, margin: '14px 0 0 0' }}>
             該当 {filtered.length} 件
           </p>
         </section>
@@ -426,14 +427,14 @@ export default function PenSearch() {
                     <tr key={pen.id} style={{ borderBottom: '0.5px solid #f0eeeb' }}>
                       <td style={{ padding: '10px 12px', fontWeight: 600, color: T.ink, whiteSpace: 'nowrap' }}>{pen.brand}</td>
                       <td style={{ padding: '10px 12px', fontWeight: 600, color: T.ink }}>{pen.model}</td>
-                      <td style={{ padding: '10px 12px', color: T.primary, fontWeight: 600, whiteSpace: 'nowrap' }}>{pen.type}</td>
+                      <td style={{ padding: '10px 12px', color: T.muted, fontWeight: 600, whiteSpace: 'nowrap' }}>{pen.type}</td>
                       <td style={{ padding: '10px 12px', color: T.muted, whiteSpace: 'nowrap' }}>{pen.length}mm</td>
                       <td style={{ padding: '10px 12px', color: T.muted, whiteSpace: 'nowrap' }}>{pen.diameter}mm</td>
                       <td style={{ padding: '10px 12px' }}>
-                        <a href={pen.amazonUrl} target="_blank" rel="noopener noreferrer" style={{ color: T.primary, fontWeight: 600, textDecoration: 'none', marginRight: 10 }}>
+                        <a href={pen.amazonUrl} target="_blank" rel="noopener noreferrer" style={{ color: T.ink, fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 3, marginRight: 10 }}>
                           Amazon
                         </a>
-                        <a href={pen.rakutenUrl} target="_blank" rel="noopener noreferrer" style={{ color: T.primary, fontWeight: 600, textDecoration: 'none' }}>
+                        <a href={pen.rakutenUrl} target="_blank" rel="noopener noreferrer" style={{ color: T.ink, fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 3 }}>
                           楽天
                         </a>
                       </td>
@@ -445,6 +446,7 @@ export default function PenSearch() {
           )}
         </section>
       </div>
-    </main>,
+    </main>
+    </>,
   );
 }

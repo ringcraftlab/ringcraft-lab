@@ -936,7 +936,7 @@ export default function RefillMaker() {
                   border: 'none',
                   background: 'transparent',
                   cursor: 'pointer',
-                  borderBottom: mobileTab === id ? `3px solid ${T.primary}` : '3px solid transparent',
+                  borderBottom: mobileTab === id ? `2px solid ${T.ink}` : '2px solid transparent',
                   marginBottom: -1,
                 }}
               >
@@ -945,7 +945,7 @@ export default function RefillMaker() {
                     style={{
                       fontSize: 14,
                       fontWeight: mobileTab === id ? 700 : 600,
-                      color: mobileTab === id ? T.primary : T.ink,
+                      color: mobileTab === id ? T.ink : T.muted,
                     }}
                   >
                     {l1}
@@ -954,7 +954,7 @@ export default function RefillMaker() {
                     style={{
                       fontSize: 10,
                       fontWeight: 500,
-                      color: mobileTab === id ? T.primary : T.muted,
+                      color: mobileTab === id ? T.inkSoft : T.muted,
                       letterSpacing: id === 'images' ? '0.02em' : '0',
                     }}
                   >
@@ -1011,10 +1011,10 @@ const S = {
     boxSizing: 'border-box',
   },
   sizeRowActive: {
-    background: T.primary,
-    color: '#fff',
-    borderColor: T.primary,
-    boxShadow: '0 4px 14px rgba(91, 127, 166, 0.28)',
+    background: T.ink,
+    color: '#faf7f2',
+    borderColor: T.ink,
+    boxShadow: 'none',
   },
   pill: {
     display: 'flex',
@@ -1029,9 +1029,9 @@ const S = {
     boxSizing: 'border-box',
   },
   pillActive: {
-    background: T.primary,
-    color: '#fff',
-    borderColor: T.primary,
+    background: T.primaryLight,
+    color: T.ink,
+    borderColor: T.ink,
     fontWeight: 600,
   },
   ctrlRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
@@ -1048,7 +1048,7 @@ const S = {
     fontFamily: T.font,
     boxSizing: 'border-box',
   },
-  btnPrimary: { background: T.primary, color: '#fff', boxShadow: '0 3px 12px rgba(91, 127, 166, 0.28)' },
+  btnPrimary: { background: T.ink, color: '#faf7f2', boxShadow: 'none' },
   btnGhostLine: {
     background: '#fff',
     color: T.primary,

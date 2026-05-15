@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import { T } from '../theme/appTheme';
 import { SIZES, HOLE_STANDARDS, getHolePositions } from '../config/sizes';
@@ -9,8 +10,17 @@ import jsPDF from 'jspdf';
 const HOLE_ZONE_MM = 6.5;
 const IMAGE_START_MM = 6.7;
 
+const SIZE_QUERY_IDS = new Set(['microfive', 'mini6', 'bible', 'a5']);
+
+function initialSizeFromSearch() {
+  if (typeof window === 'undefined') return 'microfive';
+  const q = new URLSearchParams(window.location.search).get('size');
+  return q && SIZE_QUERY_IDS.has(q) ? q : 'microfive';
+}
+
 export default function RefillMaker() {
-  const [sizeId, setSizeId] = useState('microfive');
+  const [searchParams] = useSearchParams();
+  const [sizeId, setSizeId] = useState(initialSizeFromSearch);
   const [customW, setCustomW] = useState(80);
   const [customH, setCustomH] = useState(126);
   const [customHoleStandard, setCustomHoleStandard] = useState('mini6');
@@ -47,6 +57,23 @@ export default function RefillMaker() {
   const marginY_px = marginY * PX;
   const holeZone_px = HOLE_ZONE_MM * PX;
   const imageStart_px = IMAGE_START_MM * PX;
+
+  const sizeQueryParam = searchParams.get('size');
+  const appliedSizeFromUrl = useRef(null);
+
+  useEffect(() => {
+    const raw = sizeQueryParam;
+    if (!raw || !SIZE_QUERY_IDS.has(raw)) {
+      appliedSizeFromUrl.current = null;
+      return;
+    }
+    if (appliedSizeFromUrl.current === raw) return;
+    appliedSizeFromUrl.current = raw;
+    setSizeId(raw);
+    setImages({});
+    setHolePositions({});
+    setOrientation('portrait');
+  }, [sizeQueryParam]);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 900px)');
@@ -363,7 +390,7 @@ export default function RefillMaker() {
           >
             {icon}
           </span>
-          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', color: '#3d3a36' }}>{title}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', color: T.inkSoft }}>{title}</span>
         </div>
         {children}
       </section>
@@ -625,8 +652,29 @@ export default function RefillMaker() {
     </>
   );
 
+  const imageFilledCount = Object.values(images).filter(Boolean).length;
+
   const mobileImagesContent = (
-    <GroupCard title={`画像（${total}枚）`} icon={IcoImage}>{imagesBlockInner}</GroupCard>
+    <>
+      <div
+        style={{
+          marginBottom: 14,
+          padding: '12px 14px',
+          borderRadius: 9,
+          background: 'rgba(91, 127, 166, 0.1)',
+          border: '0.5px solid #e2ddd4',
+          fontSize: 13,
+          lineHeight: 1.55,
+          color: T.ink,
+        }}
+      >
+        <span style={{ fontWeight: 700, color: T.primary }}>このタブ＝写真・スクショの追加だけ。</span>
+        {' '}
+        枠をタップして1枚ずつ選ぶか、下の「まとめて選択」で複数枚まとめて入れられます。
+        <span style={{ display: 'block', marginTop: 6, fontSize: 12, color: T.muted }}>いま {imageFilledCount} / {total} 枠に画像あり</span>
+      </div>
+      <GroupCard title={`${total}枠に写真を配置`} icon={IcoImage}>{imagesBlockInner}</GroupCard>
+    </>
   );
 
   const previewPanelInner = (
@@ -809,42 +857,74 @@ export default function RefillMaker() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
           <div
             style={{
               display: 'flex',
               borderBottom: `1px solid ${T.border}`,
               background: T.sidebar,
-              padding: '0 8px',
-              flexShrink: 0,
+              padding: '0 6px',
             }}
           >
             {[
-              ['settings', '設定'],
-              ['images', '画像'],
-              ['preview', 'プレビュー'],
-            ].map(([id, label]) => (
+              { id: 'settings', l1: '設定', l2: 'サイズなど' },
+              { id: 'images', l1: '写真', l2: `${imageFilledCount}/${total}枚` },
+              { id: 'preview', l1: 'プレビュー', l2: '印刷前確認' },
+            ].map(({ id, l1, l2 }) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => setMobileTab(id)}
                 style={{
                   flex: 1,
-                  padding: '14px 8px',
+                  padding: '10px 4px 12px',
                   border: 'none',
                   background: 'transparent',
-                  fontSize: 14,
-                  fontWeight: mobileTab === id ? 600 : 500,
-                  color: mobileTab === id ? T.primary : T.muted,
                   cursor: 'pointer',
                   borderBottom: mobileTab === id ? `3px solid ${T.primary}` : '3px solid transparent',
                   marginBottom: -1,
                 }}
               >
-                {label}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  <span
+                    style={{
+                      fontSize: 14,
+                      fontWeight: mobileTab === id ? 700 : 600,
+                      color: mobileTab === id ? T.primary : T.ink,
+                    }}
+                  >
+                    {l1}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 500,
+                      color: mobileTab === id ? T.primary : T.muted,
+                      letterSpacing: id === 'images' ? '0.02em' : '0',
+                    }}
+                  >
+                    {l2}
+                  </span>
+                </div>
               </button>
             ))}
           </div>
-          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '16px 14px 32px' }}>
+          <div
+            style={{
+              padding: '8px 12px 10px',
+              background: '#fff',
+              borderBottom: `1px solid ${T.border}`,
+              fontSize: 12,
+              color: T.muted,
+              lineHeight: 1.45,
+            }}
+          >
+            {mobileTab === 'settings' && 'リフィルサイズ・印刷向き・穴の位置・表示・印刷はこのタブで。'}
+            {mobileTab === 'images' && '＋の枠をタップ → 写真を選ぶ。まとめて入れる場合は一番下のボタン。'}
+            {mobileTab === 'preview' && 'A4に並んだ状態を確認。穴の左右は枠をタップで切り替え。'}
+          </div>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '16px 14px 32px' }}>
             {mobileTab === 'settings' && mobileSettingsContent}
             {mobileTab === 'images' && mobileImagesContent}
             {mobileTab === 'preview' && (

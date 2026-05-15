@@ -8,8 +8,8 @@ const TYPES = ['万年筆', 'ボールペン'];
 const card = {
   background: '#fff',
   border: '0.5px solid #efefef',
-  borderRadius: 14,
-  boxShadow: '0 2px 16px rgba(45, 55, 72, 0.06)',
+  borderRadius: 12,
+  boxShadow: '0 2px 12px rgba(45, 55, 72, 0.05)',
 };
 
 const chipOff = {
@@ -30,6 +30,7 @@ export default function PenSearch() {
   const [pens, setPens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const [showAllBrands, setShowAllBrands] = useState(false);
   const [filters, setFilters] = useState({
     type: [],
     brand: [],
@@ -67,7 +68,16 @@ export default function PenSearch() {
   }, []);
 
   const brands = useMemo(() => getUniqueBrands(pens), [pens]);
-  const typeCount = useMemo(() => new Set(pens.map((p) => p.type)).size, [pens]);
+  const popularBrands = useMemo(() => {
+    if (!pens.length) return [];
+    const counts = new Map();
+    for (const p of pens) counts.set(p.brand, (counts.get(p.brand) || 0) + 1);
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 10)
+      .map(([name]) => name);
+  }, [pens]);
+
   const [lenMin, lenMax] = useMemo(() => (pens.length ? getMinMaxLength(pens) : [80, 130]), [pens]);
   const [diaMin, diaMax] = useMemo(() => (pens.length ? getMinMaxDiameter(pens) : [3, 20]), [pens]);
   const filtered = useMemo(() => filterPens(pens, filters), [pens, filters]);
@@ -75,6 +85,8 @@ export default function PenSearch() {
     () => [...filtered].sort((a, b) => a.length - b.length || a.brand.localeCompare(b.brand) || a.model.localeCompare(b.model)),
     [filtered],
   );
+
+  const brandChips = showAllBrands ? brands : popularBrands;
 
   const toggleType = useCallback((t) => {
     setFilters((prev) => ({
@@ -195,88 +207,145 @@ export default function PenSearch() {
   }
 
   return shell(
-    <main style={{ flex: 1, overflowY: 'auto', padding: 'clamp(16px, 4vw, 28px) clamp(14px, 4vw, 24px) 48px' }}>
-      <div style={{ maxWidth: 920, margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+    <main style={{ flex: 1, overflowY: 'auto', padding: 'clamp(14px, 4vw, 24px) clamp(14px, 4vw, 22px) 40px' }}>
+      <div style={{ maxWidth: 800, margin: '0 auto' }}>
+        <div style={{ marginBottom: 12 }}>
           <Link to="/" style={{ fontSize: 13, color: T.muted, textDecoration: 'none', fontWeight: 500 }}>
             ← ホーム
           </Link>
         </div>
 
-        {/* ヒーロー */}
-        <header style={{ display: 'flex', gap: 18, alignItems: 'flex-start', marginBottom: 28, flexWrap: 'wrap' }}>
-          <div
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: 12,
-              background: T.primary,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              boxShadow: '0 6px 20px rgba(91, 127, 166, 0.35)',
-            }}
-            aria-hidden
-          >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-              <path d="M14 3l7 7-9 9H5v-7L14 3z" stroke="#fff" strokeWidth="1.75" strokeLinejoin="round" />
-              <path d="M13 4l6 6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" opacity="0.85" />
-            </svg>
-          </div>
-          <div style={{ flex: 1, minWidth: 220 }}>
-            <h1 style={{ fontSize: 'clamp(22px, 4vw, 28px)', fontWeight: 700, margin: 0, letterSpacing: '0.02em' }}>
-              コンパクトペン検索
-            </h1>
-            <p style={{ fontSize: 15, color: T.muted, margin: '8px 0 0 0', fontWeight: 500 }}>
-              全長130mm以下のペンをラインナップ
-            </p>
-            <p style={{ fontSize: 14, color: T.inkSoft, lineHeight: 1.75, margin: '14px 0 0 0', maxWidth: 560 }}>
-              M5やミニ6に合うコンパクトペンを、ブランド・種別・長さ・軸径から絞り込み。画像一覧は出さず、条件に合うモデルをテーブルで比較できます。
-            </p>
-          </div>
+        <header style={{ marginBottom: 20 }}>
+          <h1 style={{ fontSize: 'clamp(20px, 4vw, 24px)', fontWeight: 700, margin: 0 }}>コンパクトペン検索</h1>
+          <p style={{ fontSize: 14, color: T.muted, margin: '8px 0 0 0', lineHeight: 1.5 }}>
+            全長130mm以下を、種別・ブランド・文字で絞り込み。下の表が結果です。
+          </p>
         </header>
 
-        {/* 統計バー */}
-        <section
-          style={{
-            ...card,
-            padding: '20px 24px',
-            marginBottom: 22,
-            background: 'rgba(91, 127, 166, 0.08)',
-            border: 'none',
-            display: 'flex',
-            justifyContent: 'space-around',
-            flexWrap: 'wrap',
-            gap: 20,
-          }}
-        >
-          {[
-            [String(pens.length), 'ペンモデル'],
-            [String(brands.length), 'ブランド'],
-            [String(typeCount), '種別'],
-          ].map(([num, label]) => (
-            <div key={label} style={{ textAlign: 'center', minWidth: 88 }}>
-              <div style={{ fontSize: 26, fontWeight: 700, color: T.primary, lineHeight: 1.1 }}>{num}</div>
-              <div style={{ fontSize: 12, color: T.inkSoft, marginTop: 4, fontWeight: 600 }}>{label}</div>
-            </div>
-          ))}
-        </section>
+        {/* 条件はこの1枚に集約 */}
+        <section style={{ ...card, padding: '18px 16px 20px', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: T.ink }}>条件</h2>
+            <button
+              type="button"
+              onClick={resetFilters}
+              style={{
+                border: 'none',
+                background: 'none',
+                color: T.primary,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                padding: 0,
+                fontFamily: T.font,
+              }}
+            >
+              リセット
+            </button>
+          </div>
 
-        {/* クイックフィルタ */}
-        <section style={{ ...card, padding: '22px 22px 24px', marginBottom: 22 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 18px 0', color: T.ink }}>クイックフィルタ</h2>
+          <div style={{ fontSize: 12, fontWeight: 600, color: T.inkSoft, marginBottom: 8 }}>種別</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+            {TYPES.map((t) => {
+              const on = filters.type.includes(t);
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => toggleType(t)}
+                  style={{
+                    ...chipOff,
+                    padding: '11px 20px',
+                    borderRadius: 9,
+                    border: on ? `1.5px solid ${T.primary}` : chipOff.border,
+                    background: on ? T.primary : chipOff.background,
+                    color: on ? '#fff' : T.ink,
+                    fontWeight: 700,
+                    fontSize: 14,
+                  }}
+                >
+                  {t}
+                </button>
+              );
+            })}
+          </div>
 
-          <div style={{ fontSize: 12, fontWeight: 700, color: T.inkSoft, marginBottom: 10, letterSpacing: '0.06em' }}>ブランドを選ぶ</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: T.inkSoft, marginBottom: 8 }}>名前で検索</div>
+          <input
+            type="search"
+            placeholder="例：Kaweco / スポーツ"
+            value={filters.searchQuery}
+            onChange={(e) => setFilters((p) => ({ ...p, searchQuery: e.target.value }))}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '11px 12px',
+              borderRadius: 9,
+              border: '0.5px solid #efefef',
+              fontSize: 14,
+              marginBottom: 12,
+              fontFamily: T.font,
+              background: '#fafaf8',
+            }}
+          />
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+            {[
+              ['fp', '最短の万年筆', applyPresetShortFp],
+              ['bp', '最短のボールペン', applyPresetShortBp],
+              ['slim', '細い軸（10mm以下）', applyPresetSlim],
+            ].map(([key, label, fn]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => { fn(); scrollToResults(); }}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 999,
+                  border: `0.5px solid ${T.border}`,
+                  background: '#fff',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: T.primary,
+                  cursor: 'pointer',
+                  fontFamily: T.font,
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: T.inkSoft }}>ブランド</span>
+            {brands.length > popularBrands.length && (
+              <button
+                type="button"
+                onClick={() => setShowAllBrands((v) => !v)}
+                style={{
+                  border: 'none',
+                  background: 'none',
+                  color: T.primary,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  padding: 0,
+                  fontFamily: T.font,
+                }}
+              >
+                {showAllBrands ? 'よく使うブランドだけ' : `すべて表示（${brands.length}）`}
+              </button>
+            )}
+          </div>
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))',
               gap: 8,
-              marginBottom: 22,
+              marginBottom: 8,
             }}
           >
-            {brands.map((b) => {
+            {brandChips.map((b) => {
               const on = filters.brand.includes(b);
               return (
                 <button
@@ -285,6 +354,8 @@ export default function PenSearch() {
                   onClick={() => toggleBrand(b)}
                   style={{
                     ...chipOff,
+                    padding: '8px 8px',
+                    fontSize: 12,
                     border: on ? `1.5px solid ${T.primary}` : chipOff.border,
                     background: on ? 'rgba(91, 127, 166, 0.12)' : chipOff.background,
                     color: on ? T.primary : T.ink,
@@ -297,207 +368,54 @@ export default function PenSearch() {
             })}
           </div>
 
-          <div style={{ fontSize: 12, fontWeight: 700, color: T.inkSoft, marginBottom: 10, letterSpacing: '0.06em' }}>長さ（mm）</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-            <span style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(91, 127, 166, 0.15)', color: T.primary, fontWeight: 700, fontSize: 14 }}>
-              {Math.round(filters.lengthRange[0])}mm
-            </span>
-            <span style={{ color: T.muted }}>〜</span>
-            <span style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(91, 127, 166, 0.15)', color: T.primary, fontWeight: 700, fontSize: 14 }}>
-              {Math.round(filters.lengthRange[1])}mm
-            </span>
-          </div>
-          <input type="range" min={lenMin} max={lenMax} value={filters.lengthRange[0]} onChange={(e) => setLengthLo(e.target.value)} style={rangeStyle} />
-          <input type="range" min={lenMin} max={lenMax} value={filters.lengthRange[1]} onChange={(e) => setLengthHi(e.target.value)} style={{ ...rangeStyle, marginBottom: 22 }} />
-
-          <div style={{ fontSize: 12, fontWeight: 700, color: T.inkSoft, marginBottom: 10, letterSpacing: '0.06em' }}>軸径（mm）</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-            <span style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(91, 127, 166, 0.15)', color: T.primary, fontWeight: 700, fontSize: 14 }}>
-              {filters.diameterRange[0]}mm
-            </span>
-            <span style={{ color: T.muted }}>〜</span>
-            <span style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(91, 127, 166, 0.15)', color: T.primary, fontWeight: 700, fontSize: 14 }}>
-              {filters.diameterRange[1]}mm
-            </span>
-          </div>
-          <input type="range" min={diaMin} max={diaMax} step={0.1} value={filters.diameterRange[0]} onChange={(e) => setDiameterLo(e.target.value)} style={rangeStyle} />
-          <input type="range" min={diaMin} max={diaMax} step={0.1} value={filters.diameterRange[1]} onChange={(e) => setDiameterHi(e.target.value)} style={{ ...rangeStyle, marginBottom: 18 }} />
-
-          <div style={{ fontSize: 12, fontWeight: 700, color: T.inkSoft, marginBottom: 10 }}>種別</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
-            {TYPES.map((t) => {
-              const on = filters.type.includes(t);
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => toggleType(t)}
-                  style={{
-                    ...chipOff,
-                    padding: '8px 16px',
-                    borderRadius: 999,
-                    border: on ? `1.5px solid ${T.primary}` : chipOff.border,
-                    background: on ? T.primary : chipOff.background,
-                    color: on ? '#fff' : T.ink,
-                    fontWeight: 600,
-                  }}
-                >
-                  {t}
-                </button>
-              );
-            })}
-          </div>
-
-          <div style={{ fontSize: 12, fontWeight: 700, color: T.inkSoft, marginBottom: 8 }}>モデル名</div>
-          <input
-            type="search"
-            placeholder="ブランド名・モデル名の一部で検索"
-            value={filters.searchQuery}
-            onChange={(e) => setFilters((p) => ({ ...p, searchQuery: e.target.value }))}
-            style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: '12px 14px',
-              borderRadius: 10,
-              border: '0.5px solid #efefef',
-              fontSize: 14,
-              marginBottom: 18,
-              fontFamily: T.font,
-              background: '#fafaf8',
-            }}
-          />
-
-          <div style={{ display: 'flex', gap: 10, alignItems: 'stretch', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={scrollToResults}
+          <details style={{ marginTop: 4, borderTop: '0.5px solid #efefef', paddingTop: 12 }}>
+            <summary
               style={{
-                flex: '1 1 220px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-                padding: '14px 20px',
-                borderRadius: 10,
-                border: 'none',
-                background: T.primary,
-                color: '#fff',
-                fontSize: 15,
-                fontWeight: 700,
                 cursor: 'pointer',
-                fontFamily: T.font,
-                boxShadow: '0 4px 18px rgba(91, 127, 166, 0.35)',
+                fontSize: 13,
+                fontWeight: 600,
+                color: T.ink,
+                listStyle: 'none',
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <circle cx="10" cy="10" r="6.5" stroke="currentColor" strokeWidth="2" />
-                <path d="M15 15l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              {filtered.length}本を見る
-            </button>
-            <button
-              type="button"
-              title="条件をリセット"
-              onClick={resetFilters}
-              style={{
-                width: 48,
-                minHeight: 48,
-                borderRadius: 10,
-                border: '0.5px solid #efefef',
-                background: '#fff',
-                cursor: 'pointer',
-                fontSize: 18,
-                color: T.muted,
-                flexShrink: 0,
-              }}
-            >
-              ×
-            </button>
-          </div>
+              長さ・軸径でもっと絞る（任意）
+            </summary>
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 11, color: T.muted, marginBottom: 8 }}>全長（mm）</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                <span style={{ padding: '4px 10px', borderRadius: 6, background: 'rgba(91, 127, 166, 0.12)', color: T.primary, fontWeight: 700, fontSize: 13 }}>
+                  {Math.round(filters.lengthRange[0])}〜{Math.round(filters.lengthRange[1])}
+                </span>
+              </div>
+              <input type="range" min={lenMin} max={lenMax} value={filters.lengthRange[0]} onChange={(e) => setLengthLo(e.target.value)} style={rangeStyle} />
+              <input type="range" min={lenMin} max={lenMax} value={filters.lengthRange[1]} onChange={(e) => setLengthHi(e.target.value)} style={{ ...rangeStyle, marginBottom: 14 }} />
+
+              <div style={{ fontSize: 11, color: T.muted, marginBottom: 8 }}>軸径（mm）</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ padding: '4px 10px', borderRadius: 6, background: 'rgba(91, 127, 166, 0.12)', color: T.primary, fontWeight: 700, fontSize: 13 }}>
+                  {filters.diameterRange[0]}〜{filters.diameterRange[1]}
+                </span>
+              </div>
+              <input type="range" min={diaMin} max={diaMax} step={0.1} value={filters.diameterRange[0]} onChange={(e) => setDiameterLo(e.target.value)} style={rangeStyle} />
+              <input type="range" min={diaMin} max={diaMax} step={0.1} value={filters.diameterRange[1]} onChange={(e) => setDiameterHi(e.target.value)} style={rangeStyle} />
+            </div>
+          </details>
+
+          <p style={{ fontSize: 13, fontWeight: 700, color: T.primary, margin: '14px 0 0 0' }}>
+            該当 {filtered.length} 件
+          </p>
         </section>
 
-        {/* ショートカットカード */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: 14,
-            marginBottom: 22,
-          }}
-        >
-          {[
-            { title: '最短の万年筆を見る', desc: '100mm以下のコンパクト万年筆', onClick: applyPresetShortFp },
-            { title: '最短のボールペンを見る', desc: '100mm以下のコンパクトボールペン', onClick: applyPresetShortBp },
-            { title: '軸径10mm以下で探す', desc: '細身で握りやすいペン', onClick: applyPresetSlim },
-          ].map((c) => (
-            <button
-              key={c.title}
-              type="button"
-              onClick={() => { c.onClick(); scrollToResults(); }}
-              style={{
-                ...card,
-                padding: '18px 18px 16px',
-                textAlign: 'left',
-                cursor: 'pointer',
-                fontFamily: T.font,
-                border: '0.5px solid #efefef',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(91, 127, 166, 0.12)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = card.boxShadow;
-              }}
-            >
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(91, 127, 166, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }} aria-hidden>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 3a6 6 0 016 6c0 2.5-1.5 4.5-3 5.5V17H9v-2.5C7.5 13.5 6 11.5 6 9a6 6 0 016-6z" stroke={T.primary} strokeWidth="1.75" strokeLinejoin="round" />
-                  <path d="M9 19h6" stroke={T.primary} strokeWidth="1.75" strokeLinecap="round" />
-                </svg>
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 6 }}>{c.title}</div>
-              <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.55, marginBottom: 12 }}>{c.desc}</div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: T.primary }}>探索を開始 →</span>
-            </button>
-          ))}
-        </div>
-
-        {/* 特徴（テキストのみ） */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: 14,
-            marginBottom: 28,
-          }}
-        >
-          {[
-            { t: '高度なフィルタリング', d: 'ブランド・種別・長さ・軸径から、条件に合うペンを素早く絞り込めます。' },
-            { t: '一覧で比較', d: '画像は出さずスペック中心の表なので、長さや径の違いを横並びで確認しやすいです。' },
-            { t: 'システム手帳向け', d: 'コンパクトサイズ中心のデータを、リフィル選びの参考にどうぞ。' },
-          ].map((x) => (
-            <div key={x.t} style={{ ...card, padding: '18px 16px' }}>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>{x.t}</div>
-              <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.65, margin: 0 }}>{x.d}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* 結果：画像なしテーブル */}
-        <section ref={resultsRef} id="pen-results" style={{ scrollMarginTop: 16 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px 0' }}>検索結果</h2>
+        <section ref={resultsRef} id="pen-results" style={{ scrollMarginTop: 12 }}>
           {sortedRows.length === 0 ? (
-            <p style={{ color: T.muted, fontSize: 14, padding: '20px 0' }}>条件に合うペンがありません。フィルタを緩めてお試しください。</p>
+            <p style={{ color: T.muted, fontSize: 14, padding: '12px 0' }}>該当なし。条件を変えてみてください。</p>
           ) : (
-            <div style={{ overflowX: 'auto', borderRadius: 12, border: '0.5px solid #efefef', background: '#fff' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 520 }}>
+            <div style={{ overflowX: 'auto', borderRadius: 10, border: '0.5px solid #efefef', background: '#fff' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 480 }}>
                 <thead>
                   <tr style={{ background: '#f7f5f2', textAlign: 'left' }}>
                     {['ブランド', 'モデル', '種別', '全長', '軸径', '購入'].map((h) => (
-                      <th key={h} style={{ padding: '12px 14px', fontWeight: 700, color: T.inkSoft, fontSize: 11, letterSpacing: '0.04em', borderBottom: '0.5px solid #efefef', whiteSpace: 'nowrap' }}>
+                      <th key={h} style={{ padding: '10px 12px', fontWeight: 700, color: T.inkSoft, fontSize: 11, borderBottom: '0.5px solid #efefef', whiteSpace: 'nowrap' }}>
                         {h}
                       </th>
                     ))}
@@ -506,13 +424,13 @@ export default function PenSearch() {
                 <tbody>
                   {sortedRows.map((pen) => (
                     <tr key={pen.id} style={{ borderBottom: '0.5px solid #f0eeeb' }}>
-                      <td style={{ padding: '12px 14px', fontWeight: 600, color: T.ink, whiteSpace: 'nowrap' }}>{pen.brand}</td>
-                      <td style={{ padding: '12px 14px', fontWeight: 600, color: T.ink }}>{pen.model}</td>
-                      <td style={{ padding: '12px 14px', color: T.primary, fontWeight: 600, whiteSpace: 'nowrap' }}>{pen.type}</td>
-                      <td style={{ padding: '12px 14px', color: T.muted, whiteSpace: 'nowrap' }}>{pen.length}mm</td>
-                      <td style={{ padding: '12px 14px', color: T.muted, whiteSpace: 'nowrap' }}>{pen.diameter}mm</td>
-                      <td style={{ padding: '12px 14px' }}>
-                        <a href={pen.amazonUrl} target="_blank" rel="noopener noreferrer" style={{ color: T.primary, fontWeight: 600, textDecoration: 'none', marginRight: 12 }}>
+                      <td style={{ padding: '10px 12px', fontWeight: 600, color: T.ink, whiteSpace: 'nowrap' }}>{pen.brand}</td>
+                      <td style={{ padding: '10px 12px', fontWeight: 600, color: T.ink }}>{pen.model}</td>
+                      <td style={{ padding: '10px 12px', color: T.primary, fontWeight: 600, whiteSpace: 'nowrap' }}>{pen.type}</td>
+                      <td style={{ padding: '10px 12px', color: T.muted, whiteSpace: 'nowrap' }}>{pen.length}mm</td>
+                      <td style={{ padding: '10px 12px', color: T.muted, whiteSpace: 'nowrap' }}>{pen.diameter}mm</td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <a href={pen.amazonUrl} target="_blank" rel="noopener noreferrer" style={{ color: T.primary, fontWeight: 600, textDecoration: 'none', marginRight: 10 }}>
                           Amazon
                         </a>
                         <a href={pen.rakutenUrl} target="_blank" rel="noopener noreferrer" style={{ color: T.primary, fontWeight: 600, textDecoration: 'none' }}>

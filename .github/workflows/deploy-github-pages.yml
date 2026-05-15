@@ -1,36 +1,35 @@
-name: Deploy GitHub Pages
+name: Deploy Vite site to Pages
 
 on:
   push:
-    branches: [main, master]
-  workflow_dispatch:
+    branches: ["main"]
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-concurrency:
-  group: github-pages
-  cancel-in-progress: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: npm
-      - run: npm ci
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
       - name: Build
-        env:
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/
         run: npm run build
-      - uses: actions/upload-pages-artifact@v3
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: ./dist
 
   deploy:
     needs: build

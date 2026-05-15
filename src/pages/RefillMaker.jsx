@@ -21,9 +21,10 @@ function initialSizeFromSearch() {
 export default function RefillMaker() {
   const [searchParams] = useSearchParams();
   const [sizeId, setSizeId] = useState(initialSizeFromSearch);
-  const [customW, setCustomW] = useState(80);
-  const [customH, setCustomH] = useState(126);
-  const [customHoleStandard, setCustomHoleStandard] = useState('mini6');
+  const [customW, setCustomW] = useState(62);
+  const [customH, setCustomH] = useState(105);
+  const [customHoleStandard, setCustomHoleStandard] = useState('microfive');
+  const [showOtherSizes, setShowOtherSizes] = useState(false);
   const [orientation, setOrientation] = useState('portrait');
   const [images, setImages] = useState({});
   const [holePositions, setHolePositions] = useState({});
@@ -100,7 +101,12 @@ export default function RefillMaker() {
     setImages({});
     setHolePositions({});
     setOrientation('portrait');
+    if (id === 'microfive') setCustomHoleStandard('microfive');
   };
+
+  useEffect(() => {
+    if (sizeId !== 'microfive') setShowOtherSizes(true);
+  }, [sizeId]);
 
   const handleFileInput = useCallback((e) => {
     const file = e.target.files[0];
@@ -457,35 +463,77 @@ export default function RefillMaker() {
     </div>
   );
 
+  const m5Preset = SIZES.find((s) => s.id === 'microfive');
+  const otherPresets = SIZES.filter((s) => s.id !== 'microfive' && s.id !== 'custom');
+
+  const sizeRowBtn = (s, emphasize) => (
+    <button
+      key={s.id}
+      type="button"
+      onClick={() => changeSize(s.id)}
+      style={{
+        ...S.sizeRow,
+        ...(sizeId === s.id ? S.sizeRowActive : {}),
+        ...(emphasize ? { padding: '12px 14px' } : {}),
+      }}
+    >
+      <span style={{ fontWeight: emphasize ? 700 : 600 }}>
+        {s.name}
+        {s.shortName && (
+          <span style={{ fontSize: 11, fontWeight: 500, marginLeft: 6, opacity: sizeId === s.id ? 0.85 : 0.55 }}>
+            {s.shortName}
+          </span>
+        )}
+      </span>
+      {s.w && (
+        <span style={{ fontSize: 12, opacity: sizeId === s.id ? 0.95 : 0.55 }}>
+          {s.w}×{s.h}mm · 穴{s.holePosY?.length ?? ''}
+        </span>
+      )}
+    </button>
+  );
+
   const sizeBlockInner = (
     <>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {SIZES.map((s) => (
+      <p style={{ fontSize: 12, color: T.muted, margin: '0 0 10px', lineHeight: 1.5 }}>
+        このツールはM5（マイクロ5）向けに最適化されています。
+      </p>
+      {m5Preset && sizeRowBtn(m5Preset, true)}
+      <button
+        type="button"
+        onClick={() => setShowOtherSizes((v) => !v)}
+        style={{
+          marginTop: 8,
+          width: '100%',
+          padding: '10px 12px',
+          border: '0.5px solid #efefef',
+          borderRadius: 8,
+          background: '#fff',
+          fontSize: 12,
+          fontWeight: 600,
+          color: T.muted,
+          cursor: 'pointer',
+          fontFamily: T.font,
+          textAlign: 'left',
+        }}
+      >
+        他のサイズ（M6・バイブル・A5・カスタム） {showOtherSizes ? '▲' : '▼'}
+      </button>
+      {showOtherSizes && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+          {otherPresets.map((s) => sizeRowBtn(s, false))}
           <button
-            key={s.id}
             type="button"
-            onClick={() => changeSize(s.id)}
+            onClick={() => changeSize('custom')}
             style={{
               ...S.sizeRow,
-              ...(sizeId === s.id ? S.sizeRowActive : {}),
+              ...(sizeId === 'custom' ? S.sizeRowActive : {}),
             }}
           >
-            <span style={{ fontWeight: 600 }}>
-              {s.name}
-              {s.shortName && (
-                <span style={{ fontSize: 11, fontWeight: 500, marginLeft: 6, opacity: sizeId === s.id ? 0.85 : 0.55 }}>
-                  {s.shortName}
-                </span>
-              )}
-            </span>
-            {s.w && (
-              <span style={{ fontSize: 12, opacity: sizeId === s.id ? 0.95 : 0.55 }}>
-                {s.w}×{s.h}mm
-              </span>
-            )}
+            <span style={{ fontWeight: 600 }}>カスタム</span>
           </button>
-        ))}
-      </div>
+        </div>
+      )}
       {sizeId === 'custom' && (
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10, padding: 12, background: '#fafafa', borderRadius: 9, border: '0.5px solid #efefef' }}>
           <div style={S.ctrlRow}>
@@ -640,7 +688,7 @@ export default function RefillMaker() {
 
   const desktopAsideContent = (
     <>
-      <GroupCard title="リフィルサイズ" icon={IcoRuler}>{sizeBlockInner}</GroupCard>
+      <GroupCard title="M5リフィルサイズ" icon={IcoRuler}>{sizeBlockInner}</GroupCard>
       <GroupCard title="印刷向き" icon={IcoOrient}>{orientBlockInner}</GroupCard>
       <GroupCard title="穴の位置" icon={IcoHole}>{holesBlockInner}</GroupCard>
       <GroupCard title="画像" icon={IcoImage}>{imagesBlockInner}</GroupCard>
@@ -651,7 +699,7 @@ export default function RefillMaker() {
 
   const mobileSettingsContent = (
     <>
-      <GroupCard title="リフィルサイズ" icon={IcoRuler}>{sizeBlockInner}</GroupCard>
+      <GroupCard title="M5リフィルサイズ" icon={IcoRuler}>{sizeBlockInner}</GroupCard>
       <GroupCard title="印刷向き" icon={IcoOrient}>{orientBlockInner}</GroupCard>
       <GroupCard title="穴の位置" icon={IcoHole}>{holesBlockInner}</GroupCard>
       <GroupCard title="表示設定" icon={IcoDisplay}>{displayBlockInner}</GroupCard>
@@ -829,7 +877,7 @@ export default function RefillMaker() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', fontFamily: T.font, background: T.sidebar, color: T.ink }}>
-      <AppHeader title="リフィルメーカー" />
+      <AppHeader title="M5リフィルメーカー" subtitle="62×105mm · 穴5 · マイクロ5" />
 
       {!isNarrow ? (
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>

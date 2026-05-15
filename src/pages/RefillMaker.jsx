@@ -470,7 +470,14 @@ export default function RefillMaker() {
               ...(sizeId === s.id ? S.sizeRowActive : {}),
             }}
           >
-            <span style={{ fontWeight: 600 }}>{s.name}</span>
+            <span style={{ fontWeight: 600 }}>
+              {s.name}
+              {s.shortName && (
+                <span style={{ fontSize: 11, fontWeight: 500, marginLeft: 6, opacity: sizeId === s.id ? 0.85 : 0.55 }}>
+                  {s.shortName}
+                </span>
+              )}
+            </span>
             {s.w && (
               <span style={{ fontSize: 12, opacity: sizeId === s.id ? 0.95 : 0.55 }}>
                 {s.w}×{s.h}mm

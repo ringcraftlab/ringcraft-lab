@@ -2,6 +2,7 @@ export const SIZES = [
   {
     id: 'microfive',
     name: 'マイクロ5',
+    shortName: 'M5',
     w: 62,
     h: 105,
     holePosY: [14.5, 33.5, 52.5, 71.5, 90.5],
@@ -9,6 +10,7 @@ export const SIZES = [
   {
     id: 'mini6',
     name: 'ミニ6',
+    shortName: 'M6',
     w: 80,
     h: 126,
     holePosY: [15.5, 34.5, 53.5, 72.5, 91.5, 110.5],

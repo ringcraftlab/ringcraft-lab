@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import AppHeader from '../components/AppHeader';
+import { T } from '../theme/appTheme';
 import { SIZES, HOLE_STANDARDS, getHolePositions } from '../config/sizes';
 import { calcLayout, mmToPx } from '../utils/layout';
 import html2canvas from 'html2canvas';
@@ -22,6 +23,8 @@ export default function RefillMaker() {
   const [activeSlot, setActiveSlot] = useState(null);
   const [scale, setScale] = useState(0.5);
   const [printBusy, setPrintBusy] = useState(false);
+  const [mobileTab, setMobileTab] = useState('settings');
+  const [isNarrow, setIsNarrow] = useState(false);
   const fileInputRef = useRef();
   const fileInputMultiRef = useRef();
   const sheetRef = useRef();
@@ -46,16 +49,24 @@ export default function RefillMaker() {
   const imageStart_px = IMAGE_START_MM * PX;
 
   useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)');
+    const syncNarrow = () => setIsNarrow(mq.matches);
+    syncNarrow();
+    mq.addEventListener('change', syncNarrow);
+    return () => mq.removeEventListener('change', syncNarrow);
+  }, []);
+
+  useEffect(() => {
     function updateScale() {
       if (!previewWrapRef.current) return;
-      const aw = previewWrapRef.current.clientWidth - 40;
-      const ah = previewWrapRef.current.clientHeight - 60;
+      const aw = previewWrapRef.current.clientWidth - 48;
+      const ah = previewWrapRef.current.clientHeight - 100;
       setScale(Math.min(aw / paperW_px, ah / paperH_px, 1));
     }
     updateScale();
     window.addEventListener('resize', updateScale);
     return () => window.removeEventListener('resize', updateScale);
-  }, [paperW_px, paperH_px]);
+  }, [paperW_px, paperH_px, isNarrow, mobileTab]);
 
   const changeSize = (id) => {
     setSizeId(id);
@@ -322,298 +333,555 @@ export default function RefillMaker() {
     setHolePositions({});
   };
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'sans-serif', background: '#ece9e4' }}>
+  const statusPill = `${sizePreset?.name || 'カスタム'} / ${cols}列×${rows}行 / ${total}枚`;
 
-      {/* HEADER */}
-      <header style={{ background: '#2c5282', color: '#fff', padding: '11px 22px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.2)', flexShrink: 0 }}>
-        <Link to="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 13 }}>← ホーム</Link>
-        <span style={{ opacity: 0.4 }}>|</span>
-        <div>
-          <div style={{ fontSize: 9, opacity: 0.6, letterSpacing: '0.15em', fontFamily: 'monospace' }}>RINGCRAFT LAB</div>
-          <h1 style={{ fontSize: 15, fontWeight: 500 }}>リフィルメーカー</h1>
-        </div>
-        <div style={{ marginLeft: 'auto', background: 'rgba(255,255,255,0.15)', fontSize: 10, padding: '3px 10px', borderRadius: 20, fontFamily: 'monospace' }}>
-          {sizePreset?.name || 'カスタム'} / {cols}列×{rows}行 / {total}枚
-        </div>
-      </header>
-
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-
-        {/* SIDEBAR */}
-        <aside style={{ width: 270, flexShrink: 0, background: '#fff', borderRight: '1px solid #d4d0ca', overflowY: 'auto', padding: '16px 13px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-          {/* サイズ選択 */}
-          <div>
-            <div style={S.secLabel}>📐 リフィルサイズ</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              {SIZES.map(s => (
-                <button key={s.id} onClick={() => changeSize(s.id)}
-                  style={{ ...S.modeBtn, ...(sizeId === s.id ? S.modeBtnActive : {}) }}>
-                  <span style={{ fontWeight: 600 }}>{s.name}</span>
-                  {s.w && (
-                    <span style={{ fontSize: 10, color: sizeId === s.id ? '#4a7fc1' : '#999', marginLeft: 8 }}>
-                      {s.w}×{s.h}mm
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {/* カスタム設定 */}
-            {sizeId === 'custom' && (
-              <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8, padding: '10px', background: '#f5f3f0', borderRadius: 6 }}>
-                <div style={S.ctrlRow}>
-                  <span style={{ fontSize: 12 }}>幅 (mm)</span>
-                  <input type="number" value={customW} onChange={e => { setCustomW(Number(e.target.value)); setImages({}); }} style={S.numInput} />
-                </div>
-                <div style={S.ctrlRow}>
-                  <span style={{ fontSize: 12 }}>高さ (mm)</span>
-                  <input type="number" value={customH} onChange={e => { setCustomH(Number(e.target.value)); setImages({}); }} style={S.numInput} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>穴の規格</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {HOLE_STANDARDS.map(hs => (
-                      <button key={hs.id} onClick={() => setCustomHoleStandard(hs.id)}
-                        style={{ ...S.modeBtn, padding: '5px 8px', ...(customHoleStandard === hs.id ? S.modeBtnActive : {}) }}>
-                        {hs.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <hr style={S.hr} />
-
-          {/* 印刷向き */}
-          <div>
-            <div style={S.secLabel}>📄 印刷向き</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-              {[
-                ['portrait',  `A4縦 ${calcLayout(refillW, refillH, 'portrait').total}枚`],
-                ['landscape', `A4横 ${calcLayout(refillW, refillH, 'landscape').total}枚`],
-              ].map(([val, label]) => (
-                <button key={val} onClick={() => { setOrientation(val); setImages({}); setHolePositions({}); }}
-                  style={{ ...S.modeBtn, ...(orientation === val ? S.modeBtnActive : {}) }}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <hr style={S.hr} />
-
-          {/* 穴位置 */}
-          <div>
-            <div style={S.secLabel}>⭕ 穴の位置</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-              <button onClick={() => setAllHoles('left')} style={S.modeBtn}>← 全て左</button>
-              <button onClick={() => setAllHoles('right')} style={S.modeBtn}>全て右 →</button>
-            </div>
-            <p style={{ fontSize: 10, color: '#999', marginTop: 6 }}>各リフィルをクリックで個別切替</p>
-          </div>
-
-          <hr style={S.hr} />
-
-          {/* 画像アップロード */}
-          <div>
-            <div style={S.secLabel}>📷 画像（{total}枚）</div>
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(cols, 4)}, 1fr)`, gap: 4 }}>
-              {Array.from({ length: total }, (_, i) => (
-                <div key={i} onClick={() => { setActiveSlot(i); fileInputRef.current.click(); }}
-                  style={{ aspectRatio: `${refillW}/${refillH}`, border: images[i] ? '1.5px solid #4a7fc1' : '1.5px dashed #d4d0ca', borderRadius: 3, cursor: 'pointer', position: 'relative', overflow: 'hidden', background: '#ece9e4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {images[i]
-                    ? <img src={images[i]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <span style={{ fontSize: 10, color: '#bbb', fontFamily: 'monospace' }}>{i + 1}</span>
-                  }
-                  {images[i] && (
-                    <button onClick={e => { e.stopPropagation(); setImages(prev => { const n = { ...prev }; delete n[i]; return n; }); }}
-                      style={{ position: 'absolute', top: 2, right: 2, width: 14, height: 14, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', fontSize: 8, cursor: 'pointer' }}>×</button>
-                  )}
-                </div>
-              ))}
-            </div>
-            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileInput} />
-            <input ref={fileInputMultiRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleMultiInput} />
-            <button onClick={() => fileInputMultiRef.current.click()} style={{ ...S.btn, ...S.btnGhost, marginTop: 8 }}>
-              📂 まとめて選択（最大{total}枚）
+  const settingsPanel = (
+    <>
+      <div>
+        <div style={S.secLabel}>サイズ</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {SIZES.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => changeSize(s.id)}
+              style={{
+                ...S.sizeRow,
+                ...(sizeId === s.id ? S.sizeRowActive : {}),
+              }}
+            >
+              <span style={{ fontWeight: 600 }}>{s.name}</span>
+              {s.w && (
+                <span style={{ fontSize: 12, opacity: sizeId === s.id ? 0.95 : 0.55 }}>
+                  {s.w}×{s.h}mm
+                </span>
+              )}
             </button>
-          </div>
-
-          <hr style={S.hr} />
-
-          {/* 設定 */}
-          <div>
-            <div style={S.secLabel}>⚙️ 設定</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={S.ctrlRow}>
-                <span style={{ fontSize: 12 }}>画像フィット</span>
-                <select value={fitMode} onChange={e => setFitMode(e.target.value)} style={S.select}>
-                  <option value="cover">トリミング</option>
-                  <option value="contain">全体表示</option>
-                  <option value="fill">引き伸ばし</option>
-                </select>
+          ))}
+        </div>
+        {sizeId === 'custom' && (
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10, padding: 12, background: '#fff', borderRadius: T.radiusMd, border: `1px solid ${T.border}` }}>
+            <div style={S.ctrlRow}>
+              <span style={{ fontSize: 13 }}>幅 (mm)</span>
+              <input type="number" value={customW} onChange={(e) => { setCustomW(Number(e.target.value)); setImages({}); }} style={S.numInput} />
+            </div>
+            <div style={S.ctrlRow}>
+              <span style={{ fontSize: 13 }}>高さ (mm)</span>
+              <input type="number" value={customH} onChange={(e) => { setCustomH(Number(e.target.value)); setImages({}); }} style={S.numInput} />
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: T.muted, marginBottom: 6 }}>穴の規格</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {HOLE_STANDARDS.map((hs) => (
+                  <button
+                    key={hs.id}
+                    type="button"
+                    onClick={() => setCustomHoleStandard(hs.id)}
+                    style={{ ...S.pill, ...(customHoleStandard === hs.id ? S.pillActive : {}) }}
+                  >
+                    {hs.name}
+                  </button>
+                ))}
               </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'pointer' }}>
-                <input type="checkbox" checked={showBorder} onChange={e => setShowBorder(e.target.checked)} />カット線を表示
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'pointer' }}>
-                <input type="checkbox" checked={showHoles} onChange={e => setShowHoles(e.target.checked)} />穴あけガイドを表示
-              </label>
             </div>
           </div>
+        )}
+      </div>
 
-          <hr style={S.hr} />
+      <div style={S.divider} />
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div>
+        <div style={S.secLabel}>印刷向き</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[
+            ['portrait', `A4縦 ${calcLayout(refillW, refillH, 'portrait').total}枚`],
+            ['landscape', `A4横 ${calcLayout(refillW, refillH, 'landscape').total}枚`],
+          ].map(([val, label]) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => { setOrientation(val); setImages({}); setHolePositions({}); }}
+              style={{ ...S.pill, flex: 1, justifyContent: 'center', ...(orientation === val ? S.pillActive : {}) }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={S.divider} />
+
+      <div>
+        <div style={S.secLabel}>穴の位置</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" onClick={() => setAllHoles('left')} style={{ ...S.pill, flex: 1, justifyContent: 'center' }}>
+            ← 左
+          </button>
+          <button type="button" onClick={() => setAllHoles('right')} style={{ ...S.pill, flex: 1, justifyContent: 'center' }}>
+            右 →
+          </button>
+        </div>
+        <p style={{ fontSize: 11, color: T.muted, marginTop: 8, lineHeight: 1.45 }}>
+          プレビュー上の各リフィルをタップで左右を個別に切り替えできます。
+        </p>
+      </div>
+
+      <div style={S.divider} />
+
+      <div>
+        <div style={S.secLabel}>詳細設定</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={S.ctrlRow}>
+            <span style={{ fontSize: 13 }}>画像フィット</span>
+            <select value={fitMode} onChange={(e) => setFitMode(e.target.value)} style={S.select}>
+              <option value="cover">トリミング</option>
+              <option value="contain">全体表示</option>
+              <option value="fill">引き伸ばし</option>
+            </select>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, cursor: 'pointer' }}>
+            <input type="checkbox" checked={showBorder} onChange={(e) => setShowBorder(e.target.checked)} />
+            カット線を表示
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, cursor: 'pointer' }}>
+            <input type="checkbox" checked={showHoles} onChange={(e) => setShowHoles(e.target.checked)} />
+            穴あけガイドを表示
+          </label>
+        </div>
+      </div>
+
+      {!isNarrow && (
+        <>
+          <div style={S.divider} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button
               type="button"
               disabled={printBusy}
               title="キャプチャのあと、ブラウザの印刷画面が開きます"
               onClick={() => printSheet()}
+              style={{ ...S.btn, ...S.btnPrimary, ...(printBusy ? { opacity: 0.85, cursor: 'wait' } : {}) }}
+            >
+              {printBusy ? '印刷の準備中…' : '🖨️ 印刷する'}
+            </button>
+            <button type="button" onClick={exportPDF} style={{ ...S.btn, ...S.btnOutline }}>
+              📄 PDFダウンロード
+            </button>
+            <button type="button" onClick={clearAll} style={{ ...S.btn, ...S.btnGhost }}>
+              すべてクリア
+            </button>
+          </div>
+        </>
+      )}
+    </>
+  );
+
+  const imagesPanel = (
+    <div>
+      <div style={S.secLabel}>画像（{total}枚）</div>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(cols, 4)}, 1fr)`, gap: 10 }}>
+        {Array.from({ length: total }, (_, i) => (
+          <div
+            key={i}
+            role="button"
+            tabIndex={0}
+            onClick={() => { setActiveSlot(i); fileInputRef.current.click(); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveSlot(i); fileInputRef.current.click(); } }}
+            style={{
+              aspectRatio: `${refillW}/${refillH}`,
+              border: images[i] ? `2px solid ${T.primary}` : `2px dashed ${T.borderStrong}`,
+              borderRadius: T.radiusMd,
+              cursor: 'pointer',
+              position: 'relative',
+              overflow: 'hidden',
+              background: images[i] ? '#fff' : '#faf9f6',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {images[i] ? (
+              <img src={images[i]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <span style={{ fontSize: 28, color: T.borderStrong, fontWeight: 300, lineHeight: 1 }}>+</span>
+            )}
+            {images[i] && (
+              <button
+                type="button"
+                aria-label="画像を削除"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setImages((prev) => { const n = { ...prev }; delete n[i]; return n; });
+                }}
+                style={{
+                  position: 'absolute',
+                  top: 6,
+                  right: 6,
+                  width: 22,
+                  height: 22,
+                  background: 'rgba(0,0,0,0.55)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '50%',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileInput} />
+      <input ref={fileInputMultiRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleMultiInput} />
+      <button type="button" onClick={() => fileInputMultiRef.current.click()} style={{ ...S.btn, ...S.btnOutline, marginTop: 12 }}>
+        まとめて選択（最大{total}枚）
+      </button>
+    </div>
+  );
+
+  const previewPanelInner = (
+    <>
+      <h2 style={{ fontSize: 15, fontWeight: 600, color: T.ink, margin: '0 0 4px 0' }}>プレビュー</h2>
+      <p style={{ fontSize: 11, color: T.muted, margin: '0 0 16px 0' }}>
+        {orientation === 'portrait' ? 'A4縦' : 'A4横'} · 表示 {Math.round(scale * 100)}%
+      </p>
+      <div style={{ width: paperW_px * scale, height: paperH_px * scale, flexShrink: 0, position: 'relative', margin: '0 auto' }}>
+        <div
+          ref={sheetRef}
+          id="print-sheet"
+          style={{
+            width: paperW_px,
+            height: paperH_px,
+            background: '#fff',
+            boxShadow: '0 8px 32px rgba(91, 122, 166, 0.12)',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            transformOrigin: 'top left',
+            transform: `scale(${scale})`,
+            borderRadius: 4,
+          }}
+        >
+          {Array.from({ length: total }, (_, i) => {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            const x = marginX_px + col * refillW_px;
+            const y = marginY_px + row * refillH_px;
+            const hPos = holePositions[i] || 'left';
+
+            return (
+              <div
+                key={i}
+                data-refill="sheet-cell"
+                onClick={() => toggleHole(i)}
+                title="クリックで穴の位置を左右切替"
+                style={{
+                  position: 'absolute',
+                  left: x,
+                  top: y,
+                  width: refillW_px,
+                  height: refillH_px,
+                  border: showBorder ? '1px solid #d8d4ce' : '1px solid transparent',
+                  overflow: 'hidden',
+                  background: '#f8f8f8',
+                  cursor: 'pointer',
+                  boxSizing: 'border-box',
+                }}
+              >
+                {showHoles && (
+                  <div
+                    data-refill="hole-zone"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      bottom: 0,
+                      [hPos]: 0,
+                      width: holeZone_px,
+                      background: '#efefef',
+                      borderRight: hPos === 'left' ? '1px dashed #c4c0ba' : 'none',
+                      borderLeft: hPos === 'right' ? '1px dashed #c4c0ba' : 'none',
+                      zIndex: 2,
+                    }}
+                  >
+                    {holePosArr.map((posY, hi) => (
+                      <div
+                        key={hi}
+                        style={{
+                          position: 'absolute',
+                          top: posY * PX - 6,
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          width: 12,
+                          height: 12,
+                          borderRadius: '50%',
+                          border: '1px solid #b8b4ae',
+                          background: '#fff',
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    left: hPos === 'left' ? imageStart_px : 0,
+                    right: hPos === 'right' ? imageStart_px : 0,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {images[i] ? (
+                    <img src={images[i]} alt="" style={{ width: '100%', height: '100%', objectFit: fitMode }} />
+                  ) : (
+                    <span className="refill-capture-hide" style={{ fontFamily: 'system-ui, sans-serif', fontSize: 22, color: '#d0ccc6', fontWeight: 500 }}>
+                      {i + 1}
+                    </span>
+                  )}
+                </div>
+                <div
+                  className="refill-capture-hide"
+                  style={{
+                    position: 'absolute',
+                    bottom: 4,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    fontSize: 9,
+                    color: 'rgba(0,0,0,0.22)',
+                    zIndex: 3,
+                    pointerEvents: 'none',
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  {hPos === 'left' ? '←穴' : '穴→'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div
+        style={{
+          marginTop: 20,
+          display: 'inline-flex',
+          alignSelf: 'center',
+          padding: '8px 18px',
+          borderRadius: 999,
+          background: '#fff',
+          border: `1px solid ${T.border}`,
+          fontSize: 12,
+          color: T.inkSoft,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+        }}
+      >
+        {statusPill}
+      </div>
+    </>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', fontFamily: T.font, background: T.sidebar, color: T.ink }}>
+      <AppHeader title="リフィルメーカー" />
+
+      {!isNarrow ? (
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+          <aside
+            style={{
+              width: 300,
+              flexShrink: 0,
+              background: T.sidebar,
+              borderRight: `1px solid ${T.border}`,
+              overflowY: 'auto',
+              padding: '22px 18px 28px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 0,
+            }}
+          >
+            {settingsPanel}
+            <div style={S.divider} />
+            {imagesPanel}
+          </aside>
+          <div
+            ref={previewWrapRef}
+            style={{
+              flex: 1,
+              overflow: 'auto',
+              background: T.previewBg,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              padding: '28px 24px 40px',
+            }}
+          >
+            {previewPanelInner}
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <div
+            style={{
+              display: 'flex',
+              borderBottom: `1px solid ${T.border}`,
+              background: T.sidebar,
+              padding: '0 8px',
+              flexShrink: 0,
+            }}
+          >
+            {[
+              ['settings', '設定'],
+              ['images', '画像'],
+              ['preview', 'プレビュー'],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setMobileTab(id)}
+                style={{
+                  flex: 1,
+                  padding: '14px 8px',
+                  border: 'none',
+                  background: 'transparent',
+                  fontSize: 14,
+                  fontWeight: mobileTab === id ? 600 : 500,
+                  color: mobileTab === id ? T.primary : T.muted,
+                  cursor: 'pointer',
+                  borderBottom: mobileTab === id ? `3px solid ${T.primary}` : '3px solid transparent',
+                  marginBottom: -1,
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '18px 16px', paddingBottom: 120 }}>
+            {mobileTab === 'settings' && settingsPanel}
+            {mobileTab === 'images' && imagesPanel}
+            {mobileTab === 'preview' && (
+              <div ref={previewWrapRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                {previewPanelInner}
+              </div>
+            )}
+          </div>
+          <div
+            style={{
+              position: 'fixed',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              padding: '12px 16px calc(12px + env(safe-area-inset-bottom, 0px))',
+              background: 'rgba(245, 242, 234, 0.96)',
+              backdropFilter: 'blur(8px)',
+              borderTop: `1px solid ${T.border}`,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              zIndex: 50,
+            }}
+          >
+            <button
+              type="button"
+              disabled={printBusy}
+              onClick={() => printSheet()}
               style={{
                 ...S.btn,
                 ...S.btnPrimary,
-                ...(printBusy ? { opacity: 0.75, cursor: 'wait' } : {}),
+                padding: '14px 16px',
+                fontSize: 15,
+                borderRadius: T.radiusLg,
+                ...(printBusy ? { opacity: 0.85, cursor: 'wait' } : {}),
               }}
             >
               {printBusy ? '印刷の準備中…' : '🖨️ 印刷する'}
             </button>
-            <button onClick={exportPDF} style={{ ...S.btn, ...S.btnGhost }}>📄 PDFダウンロード</button>
-            <button onClick={clearAll} style={{ ...S.btn, ...S.btnGhost }}>🗑️ すべてクリア</button>
-          </div>
-
-        </aside>
-
-        {/* PREVIEW */}
-        <div ref={previewWrapRef} style={{ flex: 1, overflow: 'auto', background: '#c8c4be', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 16px 40px', gap: 10 }}>
-          <div style={{ fontSize: 10, fontFamily: 'monospace', color: '#666' }}>
-            {orientation === 'portrait' ? 'A4縦' : 'A4横'} / {cols}列×{rows}行 / {total}枚 / 表示{Math.round(scale * 100)}%
-          </div>
-
-          <div style={{ width: paperW_px * scale, height: paperH_px * scale, flexShrink: 0, position: 'relative' }}>
-           <div ref={sheetRef} id="print-sheet" style={{
-  width: paperW_px,
-  height: paperH_px,
-  background: '#fff',
-  boxShadow: '0 6px 40px rgba(0,0,0,0.25)',
-  position: 'absolute',
-  top: 0, left: 0,
-  transformOrigin: 'top left',
-  transform: `scale(${scale})`,
-}}>
-               {Array.from({ length: total }, (_, i) => {
-                const col = i % cols;
-                const row = Math.floor(i / cols);
-                const x = marginX_px + col * refillW_px;
-                const y = marginY_px + row * refillH_px;
-                const hPos = holePositions[i] || 'left';
-
-                return (
-                  <div
-                    key={i}
-                    data-refill="sheet-cell"
-                    onClick={() => toggleHole(i)}
-                    title="クリックで穴の位置を左右切替"
-                    style={{
-                      position: 'absolute',
-                      left: x, top: y,
-                      width: refillW_px,
-                      height: refillH_px,
-                      border: showBorder ? '1px solid #ccc' : '1px solid transparent',
-                      overflow: 'hidden',
-                      background: '#f8f8f8',
-                      cursor: 'pointer',
-                      boxSizing: 'border-box',
-                    }}>
-
-                    {/* 穴ゾーン（印刷・PDF では白に差し替え） */}
-                    {showHoles && (
-                      <div
-                        data-refill="hole-zone"
-                        style={{
-                        position: 'absolute', top: 0, bottom: 0,
-                        [hPos]: 0,
-                        width: holeZone_px,
-                        background: '#efefef',
-                        borderRight: hPos === 'left' ? '1px dashed #bbb' : 'none',
-                        borderLeft: hPos === 'right' ? '1px dashed #bbb' : 'none',
-                        zIndex: 2,
-                      }}>
-                        {holePosArr.map((posY, hi) => (
-                          <div key={hi} style={{
-                            position: 'absolute',
-                            top: posY * PX - 6,
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            width: 12,
-                            height: 12,
-                            borderRadius: '50%',
-                            border: '1px solid #bbb',
-                            background: '#fff',
-                          }} />
-                        ))}
-                      </div>
-                    )}
-
-                    {/* 画像ゾーン */}
-                    <div style={{
-                      position: 'absolute', top: 0, bottom: 0,
-                      left: hPos === 'left' ? imageStart_px : 0,
-                      right: hPos === 'right' ? imageStart_px : 0,
-                      overflow: 'hidden',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      {images[i]
-                        ? <img src={images[i]} style={{ width: '100%', height: '100%', objectFit: fitMode }} />
-                        : (
-                          <span className="refill-capture-hide" style={{ fontFamily: 'monospace', fontSize: 20, color: '#ddd' }}>
-                            {i + 1}
-                          </span>
-                        )
-                      }
-                    </div>
-
-                    <div
-                      className="refill-capture-hide"
-                      style={{
-                        position: 'absolute',
-                        bottom: 3,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        fontSize: 9,
-                        color: 'rgba(0,0,0,0.25)',
-                        zIndex: 3,
-                        pointerEvents: 'none',
-                        fontFamily: 'monospace',
-                      }}
-                    >
-                      {hPos === 'left' ? '←穴' : '穴→'}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <button
+              type="button"
+              onClick={exportPDF}
+              style={{
+                ...S.btn,
+                ...S.btnOutline,
+                padding: '14px 16px',
+                fontSize: 15,
+                borderRadius: T.radiusLg,
+                background: '#fff',
+              }}
+            >
+              📄 PDFダウンロード
+            </button>
+            <button type="button" onClick={clearAll} style={{ ...S.btn, ...S.btnGhost, padding: '10px', fontSize: 13 }}>
+              すべてクリア
+            </button>
           </div>
         </div>
-      </div>
-
+      )}
     </div>
   );
 }
 
 const S = {
-  secLabel: { fontSize: 10, fontFamily: 'monospace', letterSpacing: '0.16em', color: '#999', textTransform: 'uppercase', marginBottom: 8 },
-  modeBtn: { border: '1.5px solid #d4d0ca', borderRadius: 6, padding: '7px 10px', background: '#ece9e4', cursor: 'pointer', fontSize: 12, fontFamily: 'sans-serif', textAlign: 'left', width: '100%' },
-  modeBtnActive: { borderColor: '#2c5282', background: '#ebf0f8', color: '#2c5282' },
-  ctrlRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  numInput: { border: '1px solid #d4d0ca', borderRadius: 4, padding: '4px 7px', fontSize: 12, width: 70, background: '#ece9e4' },
-  select: { border: '1px solid #d4d0ca', borderRadius: 4, padding: '4px 7px', fontSize: 12, background: '#ece9e4' },
-  hr: { border: 'none', borderTop: '1px solid #d4d0ca' },
-  btn: { width: '100%', padding: 10, border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'sans-serif' },
-  btnPrimary: { background: '#2c5282', color: '#fff' },
-  btnGhost: { background: '#ece9e4', color: '#1c1c1c', border: '1px solid #d4d0ca' },
+  secLabel: { fontSize: 11, fontWeight: 700, color: T.inkSoft, marginBottom: 10, letterSpacing: '0.04em' },
+  divider: { height: 1, background: T.border, margin: '20px 0', border: 'none' },
+  sizeRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    padding: '12px 14px',
+    borderRadius: T.radiusMd,
+    border: `1px solid ${T.border}`,
+    background: '#fff',
+    cursor: 'pointer',
+    fontSize: 14,
+    textAlign: 'left',
+    color: T.ink,
+    boxSizing: 'border-box',
+  },
+  sizeRowActive: {
+    background: T.primary,
+    color: '#fff',
+    borderColor: T.primary,
+    boxShadow: '0 4px 14px rgba(91, 127, 166, 0.35)',
+  },
+  pill: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '10px 12px',
+    borderRadius: 999,
+    border: `1px solid ${T.border}`,
+    background: '#fff',
+    cursor: 'pointer',
+    fontSize: 13,
+    color: T.ink,
+    boxSizing: 'border-box',
+  },
+  pillActive: {
+    background: T.primary,
+    color: '#fff',
+    borderColor: T.primary,
+    fontWeight: 600,
+  },
+  ctrlRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  numInput: { border: `1px solid ${T.border}`, borderRadius: 8, padding: '6px 10px', fontSize: 13, width: 76, background: '#fff' },
+  select: { border: `1px solid ${T.border}`, borderRadius: 8, padding: '6px 10px', fontSize: 13, background: '#fff', color: T.ink },
+  btn: {
+    width: '100%',
+    padding: 12,
+    border: 'none',
+    borderRadius: T.radiusMd,
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: T.font,
+    boxSizing: 'border-box',
+  },
+  btnPrimary: { background: T.primary, color: '#fff', boxShadow: '0 4px 14px rgba(91, 127, 166, 0.3)' },
+  btnOutline: { background: '#fff', color: T.primary, border: `2px solid ${T.primary}` },
+  btnGhost: { background: 'transparent', color: T.muted, border: `1px solid ${T.border}` },
 };

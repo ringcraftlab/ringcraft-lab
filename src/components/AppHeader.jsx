@@ -28,7 +28,7 @@ export default function AppHeader({ title, subtitle, showBack = true, variant = 
               fontWeight: 500,
             }}
           >
-            ← 机
+            ← ホーム
           </Link>
           <div style={{ width: 1, height: 22, background: desk ? '#e8e2d9' : 'rgba(255,255,255,0.25)' }} />
         </>

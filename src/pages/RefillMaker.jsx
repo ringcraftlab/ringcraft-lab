@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import { T } from '../theme/appTheme';
@@ -34,12 +34,16 @@ export default function RefillMaker() {
   const [activeSlot, setActiveSlot] = useState(null);
   const [scale, setScale] = useState(0.5);
   const [printBusy, setPrintBusy] = useState(false);
-  const [mobileTab, setMobileTab] = useState('settings');
+  const [activeMobileSection, setActiveMobileSection] = useState('setup');
   const [isNarrow, setIsNarrow] = useState(false);
   const fileInputRef = useRef();
   const fileInputMultiRef = useRef();
   const sheetRef = useRef();
   const previewWrapRef = useRef();
+  const mobileScrollRootRef = useRef(null);
+  const setupSectionRef = useRef(null);
+  const imagesSectionRef = useRef(null);
+  const previewSectionRef = useRef(null);
 
   const sizePreset = SIZES.find(s => s.id === sizeId);
   const refillW = sizeId === 'custom' ? customW : sizePreset.w;
@@ -94,7 +98,41 @@ export default function RefillMaker() {
     updateScale();
     window.addEventListener('resize', updateScale);
     return () => window.removeEventListener('resize', updateScale);
-  }, [paperW_px, paperH_px, isNarrow, mobileTab]);
+  }, [paperW_px, paperH_px, isNarrow]);
+
+  const scrollToMobileSection = useCallback((id) => {
+    const map = { setup: setupSectionRef, images: imagesSectionRef, preview: previewSectionRef };
+    map[id]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isNarrow) return undefined;
+    const root = mobileScrollRootRef.current;
+    if (!root) return undefined;
+    const pairs = [
+      ['setup', setupSectionRef],
+      ['images', imagesSectionRef],
+      ['preview', previewSectionRef],
+    ];
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const best = entries
+          .filter((e) => e.isIntersecting && e.intersectionRatio > 0.15)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        const id = best?.target?.getAttribute('data-section');
+        if (id) setActiveMobileSection(id);
+      },
+      { root, rootMargin: '-10% 0px -50% 0px', threshold: [0, 0.1, 0.25, 0.5, 0.75, 1] },
+    );
+    pairs.forEach(([sid, ref]) => {
+      const el = ref.current;
+      if (el) {
+        el.setAttribute('data-section', sid);
+        obs.observe(el);
+      }
+    });
+    return () => obs.disconnect();
+  }, [isNarrow, total, cols, rows]);
 
   const changeSize = (id) => {
     setSizeId(id);
@@ -372,15 +410,15 @@ export default function RefillMaker() {
     return (
       <section
         style={{
-          border: '0.5px solid #efefef',
-          borderRadius: 9,
-          padding: '14px 14px 16px',
-          marginBottom: 12,
+          border: '1px solid #ece9e4',
+          borderRadius: 10,
+          padding: '12px 12px 14px',
+          marginBottom: 10,
           background: '#fff',
           boxSizing: 'border-box',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
           <span
             aria-hidden
             style={{
@@ -495,9 +533,6 @@ export default function RefillMaker() {
 
   const sizeBlockInner = (
     <>
-      <p style={{ fontSize: 12, color: T.muted, margin: '0 0 10px', lineHeight: 1.5 }}>
-        このツールはM5（マイクロ5）向けに最適化されています。
-      </p>
       {m5Preset && sizeRowBtn(m5Preset, true)}
       <button
         type="button"
@@ -592,8 +627,8 @@ export default function RefillMaker() {
           すべて右
         </button>
       </div>
-      <p style={{ fontSize: 11, color: T.muted, margin: '10px 0 0 0', lineHeight: 1.45 }}>
-        プレビュー上の各リフィルをタップすると、左右を個別に切り替えられます。
+      <p style={{ fontSize: 11, color: T.muted, margin: '8px 0 0', lineHeight: 1.4 }}>
+        見本の枠タップでも左右を変更できます。
       </p>
     </>
   );
@@ -703,41 +738,25 @@ export default function RefillMaker() {
       <GroupCard title="印刷向き" icon={IcoOrient}>{orientBlockInner}</GroupCard>
       <GroupCard title="穴の位置" icon={IcoHole}>{holesBlockInner}</GroupCard>
       <GroupCard title="表示設定" icon={IcoDisplay}>{displayBlockInner}</GroupCard>
-      <GroupCard title="アクション" icon={IcoPrint}>{actionsBlock}</GroupCard>
     </>
   );
 
   const imageFilledCount = Object.values(images).filter(Boolean).length;
 
-  const mobileImagesContent = (
+  const renderPreviewPanel = ({ hideHeader = false } = {}) => (
     <>
-      <div
-        style={{
-          marginBottom: 14,
-          padding: '12px 14px',
-          borderRadius: 9,
-          background: 'rgba(91, 127, 166, 0.1)',
-          border: '0.5px solid #e2ddd4',
-          fontSize: 13,
-          lineHeight: 1.55,
-          color: T.ink,
-        }}
-      >
-        <span style={{ fontWeight: 700, color: T.primary }}>このタブ＝写真・スクショの追加だけ。</span>
-        {' '}
-        枠をタップして1枚ずつ選ぶか、下の「まとめて選択」で複数枚まとめて入れられます。
-        <span style={{ display: 'block', marginTop: 6, fontSize: 12, color: T.muted }}>いま {imageFilledCount} / {total} 枠に画像あり</span>
-      </div>
-      <GroupCard title={`${total}枠に写真を配置`} icon={IcoImage}>{imagesBlockInner}</GroupCard>
-    </>
-  );
-
-  const previewPanelInner = (
-    <>
-      <h2 style={{ fontSize: 15, fontWeight: 600, color: T.ink, margin: '0 0 4px 0' }}>プレビュー</h2>
-      <p style={{ fontSize: 11, color: T.muted, margin: '0 0 16px 0' }}>
-        {orientation === 'portrait' ? 'A4縦' : 'A4横'} · 表示 {Math.round(scale * 100)}%
-      </p>
+      {!hideHeader ? (
+        <>
+          <h2 style={{ fontSize: 15, fontWeight: 600, color: T.ink, margin: '0 0 4px 0' }}>プレビュー</h2>
+          <p style={{ fontSize: 11, color: T.muted, margin: '0 0 16px 0' }}>
+            {orientation === 'portrait' ? 'A4縦' : 'A4横'} · 表示 {Math.round(scale * 100)}%
+          </p>
+        </>
+      ) : (
+        <p style={{ fontSize: 11, color: T.muted, margin: '0 0 12px', textAlign: 'center', alignSelf: 'stretch' }}>
+          {orientation === 'portrait' ? 'A4縦' : 'A4横'} · 表示 {Math.round(scale * 100)}%
+        </p>
+      )}
       <div style={{ width: paperW_px * scale, height: paperH_px * scale, flexShrink: 0, position: 'relative', margin: '0 auto' }}>
         <div
           ref={sheetRef}
@@ -822,34 +841,27 @@ export default function RefillMaker() {
                     left: hPos === 'left' ? imageStart_px : 0,
                     right: hPos === 'right' ? imageStart_px : 0,
                     overflow: 'hidden',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
                   }}
                 >
                   {images[i] ? (
-                    <img src={images[i]} alt="" style={{ width: '100%', height: '100%', objectFit: fitMode }} />
+                    <div
+                      role="img"
+                      aria-label={`枠 ${i + 1} の画像`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        backgroundImage: `url(${images[i]})`,
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        backgroundSize:
+                          fitMode === 'cover' ? 'cover' : fitMode === 'contain' ? 'contain' : '100% 100%',
+                      }}
+                    />
                   ) : (
                     <span className="refill-capture-hide" style={{ fontFamily: 'system-ui, sans-serif', fontSize: 22, color: '#d0ccc6', fontWeight: 500 }}>
                       {i + 1}
                     </span>
                   )}
-                </div>
-                <div
-                  className="refill-capture-hide"
-                  style={{
-                    position: 'absolute',
-                    bottom: 4,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    fontSize: 9,
-                    color: 'rgba(0,0,0,0.22)',
-                    zIndex: 3,
-                    pointerEvents: 'none',
-                    fontFamily: 'monospace',
-                  }}
-                >
-                  {hPos === 'left' ? '←穴' : '穴→'}
                 </div>
               </div>
             );
@@ -858,10 +870,10 @@ export default function RefillMaker() {
       </div>
       <div
         style={{
-          marginTop: 20,
+          marginTop: 16,
           display: 'inline-flex',
           alignSelf: 'center',
-          padding: '8px 18px',
+          padding: '7px 16px',
           borderRadius: 999,
           background: '#fff',
           border: `1px solid ${T.border}`,
@@ -875,20 +887,78 @@ export default function RefillMaker() {
     </>
   );
 
+  const MOB_SEGMENTS = [
+    { id: 'setup', title: '準備' },
+    { id: 'images', title: '写真' },
+    { id: 'preview', title: '確認' },
+  ];
+
+  const mobileStickyBar = (
+    <div
+      style={{
+        flexShrink: 0,
+        background: '#fff',
+        borderTop: `1px solid ${T.border}`,
+        padding: '10px 12px',
+        paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+        boxShadow: '0 -4px 20px rgba(42,36,32,0.06)',
+      }}
+    >
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          type="button"
+          disabled={printBusy}
+          title="プレビューと同じ内容を印刷します"
+          onClick={() => printSheet()}
+          style={{
+            ...S.btn,
+            ...S.btnPrimary,
+            flex: 1,
+            margin: 0,
+            ...(printBusy ? { opacity: 0.85, cursor: 'wait' } : {}),
+          }}
+        >
+          {printBusy ? '準備中…' : '印刷'}
+        </button>
+        <button
+          type="button"
+          onClick={exportPDF}
+          style={{ ...S.btn, ...S.btnGhostLine, flex: 1, margin: 0 }}
+        >
+          PDF
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={clearAll}
+        style={{
+          ...S.btn,
+          ...S.btnGhostMuted,
+          marginTop: 8,
+          padding: '8px',
+          fontSize: 12,
+          fontWeight: 500,
+        }}
+      >
+        すべてクリア
+      </button>
+    </div>
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', fontFamily: T.font, background: T.sidebar, color: T.ink }}>
-      <AppHeader title="M5リフィルメーカー" subtitle="62×105mm · 穴5 · マイクロ5" />
+      <AppHeader title="リフィルコラージュ" subtitle="M5 · 62×105mm · 穴5 · マイクロ5" />
 
       {!isNarrow ? (
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
           <aside
             style={{
-              width: 320,
+              width: 300,
               flexShrink: 0,
               background: T.sidebar,
               borderRight: `1px solid ${T.border}`,
               overflowY: 'auto',
-              padding: '18px 16px 28px',
+              padding: '14px 12px 22px',
               display: 'flex',
               flexDirection: 'column',
             }}
@@ -907,87 +977,124 @@ export default function RefillMaker() {
               padding: '28px 24px 40px',
             }}
           >
-            {previewPanelInner}
+            {renderPreviewPanel()}
           </div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
           <div
             style={{
-              display: 'flex',
-              borderBottom: `1px solid ${T.border}`,
+              flexShrink: 0,
               background: T.sidebar,
-              padding: '0 6px',
+              padding: '6px 10px 8px',
+              borderBottom: `1px solid ${T.border}`,
             }}
           >
-            {[
-              { id: 'settings', l1: '設定', l2: 'サイズなど' },
-              { id: 'images', l1: '写真', l2: `${imageFilledCount}/${total}枚` },
-              { id: 'preview', l1: 'プレビュー', l2: '印刷前確認' },
-            ].map(({ id, l1, l2 }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setMobileTab(id)}
-                style={{
-                  flex: 1,
-                  padding: '10px 4px 12px',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  borderBottom: mobileTab === id ? `2px solid ${T.ink}` : '2px solid transparent',
-                  marginBottom: -1,
-                }}
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                  <span
+            <div
+              role="tablist"
+              aria-label="作業ステップ"
+              style={{
+                display: 'flex',
+                gap: 3,
+                padding: 3,
+                borderRadius: 11,
+                background: '#d9d5cd',
+              }}
+            >
+              {MOB_SEGMENTS.map(({ id, title }) => {
+                const active = activeMobileSection === id;
+                return (
+                  <button
+                    key={id}
+                    role="tab"
+                    type="button"
+                    aria-selected={active}
+                    onClick={() => scrollToMobileSection(id)}
                     style={{
-                      fontSize: 14,
-                      fontWeight: mobileTab === id ? 700 : 600,
-                      color: mobileTab === id ? T.ink : T.muted,
+                      flex: 1,
+                      border: 'none',
+                      borderRadius: 9,
+                      padding: '10px 4px',
+                      cursor: 'pointer',
+                      fontFamily: T.font,
+                      background: active ? '#fff' : 'transparent',
+                      boxShadow: active ? '0 1px 3px rgba(42,36,32,0.1)' : 'none',
+                      transition: 'background 120ms ease, box-shadow 120ms ease',
                     }}
                   >
-                    {l1}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 500,
-                      color: mobileTab === id ? T.inkSoft : T.muted,
-                      letterSpacing: id === 'images' ? '0.02em' : '0',
-                    }}
-                  >
-                    {l2}
-                  </span>
-                </div>
-              </button>
-            ))}
+                    <span
+                      style={{
+                        display: 'block',
+                        fontSize: 13,
+                        fontWeight: active ? 700 : 600,
+                        color: active ? T.ink : T.muted,
+                        lineHeight: 1.25,
+                      }}
+                    >
+                      {title}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div
+            ref={mobileScrollRootRef}
             style={{
-              padding: '8px 12px 10px',
-              background: '#fff',
-              borderBottom: `1px solid ${T.border}`,
-              fontSize: 12,
-              color: T.muted,
-              lineHeight: 1.45,
+              flex: 1,
+              overflowY: 'auto',
+              minHeight: 0,
+              scrollPaddingTop: 12,
+              WebkitOverflowScrolling: 'touch',
+              paddingBottom: 'calc(120px + env(safe-area-inset-bottom, 0px))',
             }}
           >
-            {mobileTab === 'settings' && 'リフィルサイズ・印刷向き・穴の位置・表示・印刷はこのタブで。'}
-            {mobileTab === 'images' && '＋の枠をタップ → 写真を選ぶ。まとめて入れる場合は一番下のボタン。'}
-            {mobileTab === 'preview' && 'A4に並んだ状態を確認。穴の左右は枠をタップで切り替え。'}
+            <div style={{ padding: '12px 12px 6px', maxWidth: 560, margin: '0 auto' }}>
+              <section
+                ref={setupSectionRef}
+                style={{ scrollMarginTop: 8, marginBottom: 18 }}
+              >
+                <div style={{ marginBottom: 12 }}>
+                  <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: T.ink, letterSpacing: '-0.01em' }}>準備</h2>
+                  <p style={{ margin: '3px 0 0', fontSize: 12, color: T.muted, lineHeight: 1.45 }}>サイズ・向き・穴・枠線</p>
+                </div>
+                {mobileSettingsContent}
+              </section>
+              <section
+                ref={imagesSectionRef}
+                style={{ scrollMarginTop: 8, marginBottom: 18 }}
+              >
+                <div style={{ marginBottom: 12 }}>
+                  <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: T.ink, letterSpacing: '-0.01em' }}>写真</h2>
+                  <p style={{ margin: '3px 0 0', fontSize: 12, color: T.muted, lineHeight: 1.45 }}>
+                    {imageFilledCount}／{total} 枠
+                  </p>
+                </div>
+                <GroupCard title={`${total}枠に写真を配置`} icon={IcoImage}>{imagesBlockInner}</GroupCard>
+              </section>
+              <section ref={previewSectionRef} style={{ scrollMarginTop: 8, marginBottom: 8 }}>
+                <div style={{ marginBottom: 12 }}>
+                  <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: T.ink, letterSpacing: '-0.01em' }}>確認</h2>
+                  <p style={{ margin: '3px 0 0', fontSize: 12, color: T.muted, lineHeight: 1.45 }}>見本です。印刷・PDFは下のボタン。</p>
+                </div>
+                <div
+                  ref={previewWrapRef}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '8px 0 20px',
+                    background: T.previewBg,
+                    borderRadius: 12,
+                    border: `0.5px solid ${T.border}`,
+                  }}
+                >
+                  {renderPreviewPanel({ hideHeader: true })}
+                </div>
+              </section>
+            </div>
           </div>
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '16px 14px 32px' }}>
-            {mobileTab === 'settings' && mobileSettingsContent}
-            {mobileTab === 'images' && mobileImagesContent}
-            {mobileTab === 'preview' && (
-              <div ref={previewWrapRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                {previewPanelInner}
-              </div>
-            )}
-          </div>
+          {mobileStickyBar}
         </div>
       )}
     </div>

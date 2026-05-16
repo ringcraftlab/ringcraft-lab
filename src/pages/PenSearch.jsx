@@ -207,7 +207,7 @@ export default function PenSearch() {
     return shell(
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 40 }}>
         <p style={{ color: '#a44' }}>{loadError}</p>
-        <Link to="/" style={{ color: T.muted, fontWeight: 500 }}>← 机</Link>
+        <Link to="/" style={{ color: T.muted, fontWeight: 500 }}>← ホーム</Link>
       </div>,
     );
   }

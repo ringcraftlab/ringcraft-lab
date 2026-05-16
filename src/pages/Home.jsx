@@ -17,9 +17,46 @@ const bd = `0.5px solid ${C.border}`;
 
 const OTHER_SIZES = SIZES.filter((s) => s.id !== 'microfive' && s.id !== 'custom');
 
-const ACTIONS = [
-  { to: '/refill-maker?size=microfive', label: 'リフィルを作る', primary: true },
-  { to: '/pen-search', label: 'ペンを探す', primary: false },
+/** 写真を並べるイメージ（2×2グリッド） */
+function IcoCollage({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" width="22" height="22" aria-hidden>
+      <g fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2.5" y="2.5" width="9" height="9" rx="1.75" />
+        <rect x="12.5" y="2.5" width="9" height="9" rx="1.75" />
+        <rect x="2.5" y="12.5" width="9" height="9" rx="1.75" />
+        <rect x="12.5" y="12.5" width="9" height="9" rx="1.75" />
+      </g>
+    </svg>
+  );
+}
+
+function IcoPen({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" width="22" height="22" aria-hidden>
+      <g fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14.8 4.2L19.8 9.2c.6.6.6 1.5 0 2.1L10.5 20.6H5.3v-5.2L14.8 4.2z" />
+        <path d="M12.5 6.5l5 5" opacity="0.9" />
+      </g>
+    </svg>
+  );
+}
+
+const TOOL_CARDS = [
+  {
+    to: '/refill-maker?size=microfive',
+    title: 'リフィルコラージュ',
+    desc: '写真やスクショをリフィルに並べ、A4で印刷。',
+    primary: true,
+    Icon: IcoCollage,
+  },
+  {
+    to: '/pen-search',
+    title: 'ペンを探す',
+    desc: 'M5に合うコンパクトなペンを探す。',
+    primary: false,
+    Icon: IcoPen,
+  },
 ];
 
 export default function Home() {
@@ -62,16 +99,30 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="home-cta-grid">
-            {ACTIONS.map((a) => (
-              <Link
-                key={a.to}
-                to={a.to}
-                className={a.primary ? 'home-cta-btn home-cta-btn--primary' : 'home-cta-btn'}
-              >
-                {a.label}
-              </Link>
-            ))}
+          <div className="home-hero-tools">
+            {TOOL_CARDS.map((t) => {
+              const Icon = t.Icon;
+              return (
+                <Link
+                  key={t.to}
+                  to={t.to}
+                  className={t.primary ? 'home-hero-tool-card home-hero-tool-card--primary' : 'home-hero-tool-card'}
+                >
+                  <div
+                    className={
+                      t.primary
+                        ? 'home-hero-tool-card__icon-wrap home-hero-tool-card__icon-wrap--primary'
+                        : 'home-hero-tool-card__icon-wrap'
+                    }
+                  >
+                    <Icon className="home-hero-tool-card__icon" />
+                  </div>
+                  <h3 className="home-hero-tool-card__title">{t.title}</h3>
+                  <p className="home-hero-tool-card__desc">{t.desc}</p>
+                  <span className="home-hero-tool-card__hint">開く</span>
+                </Link>
+              );
+            })}
           </div>
 
           <p className="home-other-sizes">

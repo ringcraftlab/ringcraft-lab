@@ -2,6 +2,21 @@ import { copyFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
+
+/**
+ * Vite の base（先頭スラッシュ・末尾スラッシュ）。
+ * 未設定時はこのリポジトリの GitHub Pages 想定。CI では VITE_BASE_PATH を渡す。
+ * ルート公開なら VITE_BASE_PATH=/
+ */
+function viteBaseFromEnv() {
+  const raw = (process.env.VITE_BASE_PATH ?? '/ringcraft-lab/').trim()
+  if (raw === '' || raw === '/') return '/'
+  const lead = raw.startsWith('/') ? raw : `/${raw}`
+  return lead.endsWith('/') ? lead : `${lead}/`
+}
+
+const BASE = viteBaseFromEnv()
 
 /** GitHub Pages: 直URL・更新時に index を返す（SPA ルーティング） */
 function githubPagesSpaFallback() {
@@ -15,6 +30,55 @@ function githubPagesSpaFallback() {
 }
 
 export default defineConfig({
-  base: '/ringcraft-lab/',
-  plugins: [react(), githubPagesSpaFallback()],
+  base: BASE,
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.svg', 'pwa-192.png', 'pwa-512.png', 'pwa-180.png'],
+      manifest: {
+        id: `${BASE}refill-maker`,
+        name: 'リフィルコラージュ — RingCraft Lab',
+        short_name: 'リフィルコラージュ',
+        description: '写真やスクショをリフィルサイズに並べ、A4で印刷するツール',
+        lang: 'ja',
+        start_url: `${BASE}refill-maker?size=microfive`,
+        scope: BASE,
+        display: 'standalone',
+        orientation: 'any',
+        theme_color: '#faf7f2',
+        background_color: '#faf7f2',
+        icons: [
+          {
+            src: `${BASE}pwa-192.png`,
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: `${BASE}pwa-512.png`,
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: `${BASE}pwa-512.png`,
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+      },
+      // 初回訪問後: ビルド成果物を precache。ナビは SPA の index にフォールバック（拡張子付き URL は除外）。
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,json}'],
+        navigateFallback: `${BASE}index.html`,
+        navigateFallbackDenylist: [/\/[^?]*\.[^/]+$/],
+      },
+      devOptions: {
+        enabled: false,
+      },
+    }),
+    githubPagesSpaFallback(),
+  ],
 })

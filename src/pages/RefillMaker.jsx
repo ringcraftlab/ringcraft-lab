@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import { T } from '../theme/appTheme';
@@ -24,26 +24,25 @@ export default function RefillMaker() {
   const [customW, setCustomW] = useState(62);
   const [customH, setCustomH] = useState(105);
   const [customHoleStandard, setCustomHoleStandard] = useState('microfive');
-  const [showOtherSizes, setShowOtherSizes] = useState(false);
   const [orientation, setOrientation] = useState('portrait');
   const [images, setImages] = useState({});
   const [holePositions, setHolePositions] = useState({});
   const [fitMode, setFitMode] = useState('cover');
+  const [imageFitModes, setImageFitModes] = useState({});
   const [showBorder, setShowBorder] = useState(true);
   const [showHoles, setShowHoles] = useState(true);
+  const [notice, setNotice] = useState('');
   const [activeSlot, setActiveSlot] = useState(null);
   const [scale, setScale] = useState(0.5);
   const [printBusy, setPrintBusy] = useState(false);
-  const [activeMobileSection, setActiveMobileSection] = useState('setup');
+  const [activeToolPanel, setActiveToolPanel] = useState('size');
   const [isNarrow, setIsNarrow] = useState(false);
   const fileInputRef = useRef();
   const fileInputMultiRef = useRef();
+  const fileInputFillRef = useRef();
+  const activeSlotRef = useRef(null);
   const sheetRef = useRef();
   const previewWrapRef = useRef();
-  const mobileScrollRootRef = useRef(null);
-  const setupSectionRef = useRef(null);
-  const imagesSectionRef = useRef(null);
-  const previewSectionRef = useRef(null);
 
   const sizePreset = SIZES.find(s => s.id === sizeId);
   const refillW = sizeId === 'custom' ? customW : sizePreset.w;
@@ -77,6 +76,7 @@ export default function RefillMaker() {
     setSizeId(raw);
     setImages({});
     setHolePositions({});
+    setImageFitModes({});
     setOrientation('portrait');
   }, [sizeQueryParam]);
 
@@ -91,7 +91,11 @@ export default function RefillMaker() {
   useEffect(() => {
     function updateScale() {
       if (!previewWrapRef.current) return;
-      const aw = previewWrapRef.current.clientWidth - 48;
+      const aw = previewWrapRef.current.clientWidth - (isNarrow ? 20 : 48);
+      if (isNarrow) {
+        setScale(Math.min(aw / paperW_px, 0.55));
+        return;
+      }
       const ah = previewWrapRef.current.clientHeight - 100;
       setScale(Math.min(aw / paperW_px, ah / paperH_px, 1));
     }
@@ -100,66 +104,39 @@ export default function RefillMaker() {
     return () => window.removeEventListener('resize', updateScale);
   }, [paperW_px, paperH_px, isNarrow]);
 
-  const scrollToMobileSection = useCallback((id) => {
-    const map = { setup: setupSectionRef, images: imagesSectionRef, preview: previewSectionRef };
-    map[id]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!isNarrow) return undefined;
-    const root = mobileScrollRootRef.current;
-    if (!root) return undefined;
-    const pairs = [
-      ['setup', setupSectionRef],
-      ['images', imagesSectionRef],
-      ['preview', previewSectionRef],
-    ];
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const best = entries
-          .filter((e) => e.isIntersecting && e.intersectionRatio > 0.15)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        const id = best?.target?.getAttribute('data-section');
-        if (id) setActiveMobileSection(id);
-      },
-      { root, rootMargin: '-10% 0px -50% 0px', threshold: [0, 0.1, 0.25, 0.5, 0.75, 1] },
-    );
-    pairs.forEach(([sid, ref]) => {
-      const el = ref.current;
-      if (el) {
-        el.setAttribute('data-section', sid);
-        obs.observe(el);
-      }
-    });
-    return () => obs.disconnect();
-  }, [isNarrow, total, cols, rows]);
-
   const changeSize = (id) => {
     setSizeId(id);
     setImages({});
     setHolePositions({});
+    setImageFitModes({});
     setOrientation('portrait');
     if (id === 'microfive') setCustomHoleStandard('microfive');
   };
 
-  useEffect(() => {
-    if (sizeId !== 'microfive') setShowOtherSizes(true);
-  }, [sizeId]);
-
   const handleFileInput = useCallback((e) => {
     const file = e.target.files[0];
-    if (!file || activeSlot === null) return;
+    const slot = activeSlotRef.current ?? activeSlot;
+    if (!file || slot === null) return;
     const reader = new FileReader();
     reader.onload = ev => {
-      setImages(prev => ({ ...prev, [activeSlot]: ev.target.result }));
-      setHolePositions(prev => ({ ...prev, [activeSlot]: prev[activeSlot] || 'left' }));
+      setImages(prev => ({ ...prev, [slot]: ev.target.result }));
+      setHolePositions(prev => ({ ...prev, [slot]: prev[slot] || 'left' }));
+      setNotice(`${slot + 1}番に画像を入れました。`);
     };
     reader.readAsDataURL(file);
     e.target.value = '';
   }, [activeSlot]);
 
+  const openSlotImagePicker = (idx) => {
+    activeSlotRef.current = idx;
+    setActiveSlot(idx);
+    setActiveToolPanel('images');
+    fileInputRef.current?.click();
+  };
+
   const handleMultiInput = useCallback((e) => {
-    const files = Array.from(e.target.files).slice(0, total);
+    const selected = Array.from(e.target.files);
+    const files = selected.slice(0, total);
     files.forEach((file, idx) => {
       const reader = new FileReader();
       reader.onload = ev => {
@@ -168,20 +145,61 @@ export default function RefillMaker() {
       };
       reader.readAsDataURL(file);
     });
+    if (selected.length > total) {
+      setNotice(`${selected.length}枚選択されました。最大${total}枚なので先頭${total}枚を使いました。`);
+    } else if (files.length) {
+      setNotice(`${files.length}枚の画像を入れました。`);
+    }
     e.target.value = '';
   }, [total]);
 
-  const toggleHole = (idx) => {
-    setHolePositions(prev => ({
-      ...prev,
-      [idx]: (prev[idx] || 'left') === 'left' ? 'right' : 'left',
-    }));
-  };
+  const handleFillInput = useCallback((e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const nextImages = {};
+      const nextHoles = {};
+      for (let i = 0; i < total; i++) {
+        nextImages[i] = ev.target.result;
+        nextHoles[i] = holePositions[i] || 'left';
+      }
+      setImages(nextImages);
+      setHolePositions(nextHoles);
+      setNotice(`同じ画像を${total}枠に配置しました。`);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }, [holePositions, total]);
 
   const setAllHoles = (pos) => {
     const newPos = {};
     for (let i = 0; i < total; i++) newPos[i] = pos;
     setHolePositions(newPos);
+  };
+
+  const setSlotHole = (idx, pos) => {
+    setHolePositions(prev => ({ ...prev, [idx]: pos }));
+  };
+
+  const setSlotFit = (idx, mode) => {
+    setImageFitModes(prev => ({ ...prev, [idx]: mode }));
+  };
+
+  const copySlotToAll = (idx) => {
+    if (!images[idx]) return;
+    const nextImages = {};
+    const nextHoles = {};
+    const nextFits = {};
+    for (let i = 0; i < total; i++) {
+      nextImages[i] = images[idx];
+      nextHoles[i] = holePositions[idx] || 'left';
+      if (imageFitModes[idx]) nextFits[i] = imageFitModes[idx];
+    }
+    setImages(nextImages);
+    setHolePositions(nextHoles);
+    setImageFitModes(nextFits);
+    setNotice(`${idx + 1}番の画像を${total}枠にコピーしました。`);
   };
 
   const captureSheetPng = useCallback(async () => {
@@ -328,7 +346,7 @@ export default function RefillMaker() {
               try {
                 setPrintBusy(false);
                 win.print();
-              } catch (_) {
+              } catch {
                 win.removeEventListener('afterprint', onAfterPrint);
                 if (fallbackTimer) clearTimeout(fallbackTimer);
                 cleanup();
@@ -393,7 +411,7 @@ export default function RefillMaker() {
       win.document.write(docMarkup(blobUrl));
       win.document.close();
       attachPrint(win, () => {
-        try { iframe.remove(); } catch (_) { /* noop */ }
+        try { iframe.remove(); } catch { /* noop */ }
       });
     });
   }, [captureSheetPng, orientation]);
@@ -402,87 +420,60 @@ export default function RefillMaker() {
     if (!window.confirm('すべてクリアしますか？')) return;
     setImages({});
     setHolePositions({});
+    setImageFitModes({});
+    setNotice('');
   };
 
   const statusPill = `${sizePreset?.name || 'カスタム'} / ${cols}列×${rows}行 / ${total}枚`;
 
-  function GroupCard({ title, icon, children }) {
-    return (
-      <section
-        style={{
-          border: '1px solid #ece9e4',
-          borderRadius: 10,
-          padding: '12px 12px 14px',
-          marginBottom: 10,
-          background: '#fff',
-          boxSizing: 'border-box',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
-          <span
-            aria-hidden
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              background: 'rgba(91, 127, 166, 0.12)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            {icon}
-          </span>
-          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', color: T.inkSoft }}>{title}</span>
-        </div>
-        {children}
-      </section>
-    );
-  }
-
   const IcoRuler = (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M4 7h16M4 11h10M4 15h14M4 19h8" stroke="#5b7fa6" strokeWidth="1.75" strokeLinecap="round" />
+      <path d="M4 7h16M4 11h10M4 15h14M4 19h8" stroke={T.muted} strokeWidth="1.75" strokeLinecap="round" />
     </svg>
   );
   const IcoOrient = (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="6" y="4" width="12" height="16" rx="2" stroke="#5b7fa6" strokeWidth="1.75" />
-      <path d="M9 8h6M9 12h4" stroke="#5b7fa6" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
+      <rect x="6" y="4" width="12" height="16" rx="2" stroke={T.muted} strokeWidth="1.75" />
+      <path d="M9 8h6M9 12h4" stroke={T.muted} strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
     </svg>
   );
   const IcoHole = (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="7" cy="8" r="2" stroke="#5b7fa6" strokeWidth="1.5" />
-      <circle cx="7" cy="14" r="2" stroke="#5b7fa6" strokeWidth="1.5" />
-      <path d="M14 6h6v12h-6" stroke="#5b7fa6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="7" cy="8" r="2" stroke={T.muted} strokeWidth="1.5" />
+      <circle cx="7" cy="14" r="2" stroke={T.muted} strokeWidth="1.5" />
+      <path d="M14 6h6v12h-6" stroke={T.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
   const IcoImage = (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="4" y="5" width="16" height="14" rx="2" stroke="#5b7fa6" strokeWidth="1.75" />
-      <circle cx="9" cy="10" r="1.5" fill="#5b7fa6" opacity="0.6" />
-      <path d="M4 17l5-5 4 4 3-3 4 4" stroke="#5b7fa6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
+      <rect x="4" y="5" width="16" height="14" rx="2" stroke={T.muted} strokeWidth="1.75" />
+      <circle cx="9" cy="10" r="1.5" fill={T.muted} opacity="0.6" />
+      <path d="M4 17l5-5 4 4 3-3 4 4" stroke={T.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
     </svg>
   );
   const IcoDisplay = (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M5 8h14M5 12h10M5 16h12" stroke="#5b7fa6" strokeWidth="1.75" strokeLinecap="round" />
-      <circle cx="18" cy="8" r="1.5" fill="#5b7fa6" />
-      <circle cx="15" cy="12" r="1.5" fill="#5b7fa6" />
-      <circle cx="17" cy="16" r="1.5" fill="#5b7fa6" />
+      <path d="M5 8h14M5 12h10M5 16h12" stroke={T.muted} strokeWidth="1.75" strokeLinecap="round" />
+      <circle cx="18" cy="8" r="1.5" fill={T.muted} />
+      <circle cx="15" cy="12" r="1.5" fill={T.muted} />
+      <circle cx="17" cy="16" r="1.5" fill={T.muted} />
     </svg>
   );
   const IcoPrint = (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M7 8V5h10v3M7 16v3h10v-3" stroke="#5b7fa6" strokeWidth="1.75" strokeLinecap="round" />
-      <rect x="5" y="8" width="14" height="8" rx="1.5" stroke="#5b7fa6" strokeWidth="1.75" />
+      <path d="M7 8V5h10v3M7 16v3h10v-3" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+      <rect x="5" y="8" width="14" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.75" />
+    </svg>
+  );
+  const IcoPdf = (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M7 3h7l4 4v14H7V3Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M14 3v5h4M9 15h6M9 18h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   );
 
   const actionsBlock = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <button
         type="button"
         disabled={printBusy}
@@ -490,94 +481,68 @@ export default function RefillMaker() {
         onClick={() => printSheet()}
         style={{ ...S.btn, ...S.btnPrimary, ...(printBusy ? { opacity: 0.85, cursor: 'wait' } : {}) }}
       >
+        <span style={{ display: 'inline-flex', marginRight: 8, verticalAlign: -2 }}>{IcoPrint}</span>
         {printBusy ? '印刷の準備中…' : '印刷'}
       </button>
       <button type="button" onClick={exportPDF} style={{ ...S.btn, ...S.btnGhostLine }}>
+        <span style={{ display: 'inline-flex', marginRight: 8, verticalAlign: -2 }}>{IcoPdf}</span>
         PDF
       </button>
-      <button type="button" onClick={clearAll} style={{ ...S.btn, ...S.btnGhostMuted }}>
+      <button type="button" onClick={clearAll} style={S.clearLink}>
         すべてクリア
       </button>
     </div>
   );
 
-  const m5Preset = SIZES.find((s) => s.id === 'microfive');
-  const otherPresets = SIZES.filter((s) => s.id !== 'microfive' && s.id !== 'custom');
+  const fixedPresets = ['microfive', 'mini6', 'bible', 'a5']
+    .map((id) => SIZES.find((s) => s.id === id))
+    .filter(Boolean);
 
-  const sizeRowBtn = (s, emphasize) => (
+  const sizeGridBtn = (s) => (
     <button
       key={s.id}
       type="button"
       onClick={() => changeSize(s.id)}
       style={{
-        ...S.sizeRow,
+        ...S.sizeGridButton,
         ...(sizeId === s.id ? S.sizeRowActive : {}),
-        ...(emphasize ? { padding: '12px 14px' } : {}),
       }}
     >
-      <span style={{ fontWeight: emphasize ? 700 : 600 }}>
-        {s.name}
-        {s.shortName && (
-          <span style={{ fontSize: 11, fontWeight: 500, marginLeft: 6, opacity: sizeId === s.id ? 0.85 : 0.55 }}>
-            {s.shortName}
-          </span>
-        )}
+      <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3, color: sizeId === s.id ? T.ink : 'inherit' }}>
+        {s.shortName || s.name}
       </span>
-      {s.w && (
-        <span style={{ fontSize: 12, opacity: sizeId === s.id ? 0.95 : 0.55 }}>
-          {s.w}×{s.h}mm · 穴{s.holePosY?.length ?? ''}
-        </span>
-      )}
+      <span style={{ marginTop: 4, fontSize: 11, lineHeight: 1.35, color: sizeId === s.id ? T.muted : T.hint }}>
+        {s.w}×{s.h}
+      </span>
     </button>
   );
 
   const sizeBlockInner = (
     <>
-      {m5Preset && sizeRowBtn(m5Preset, true)}
+      <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
+        {fixedPresets.map(sizeGridBtn)}
+      </div>
       <button
         type="button"
-        onClick={() => setShowOtherSizes((v) => !v)}
+        onClick={() => changeSize('custom')}
         style={{
-          marginTop: 8,
-          width: '100%',
-          padding: '10px 12px',
-          border: '0.5px solid #efefef',
-          borderRadius: 8,
-          background: '#fff',
-          fontSize: 12,
-          fontWeight: 600,
-          color: T.muted,
-          cursor: 'pointer',
-          fontFamily: T.font,
-          textAlign: 'left',
+          ...S.sizeRow,
+          marginTop: 12,
+          justifyContent: 'center',
+          ...(sizeId === 'custom' ? S.sizeRowActive : {}),
         }}
       >
-        他のサイズ（M6・バイブル・A5・カスタム） {showOtherSizes ? '▲' : '▼'}
+        <span style={{ fontWeight: 700 }}>カスタム</span>
       </button>
-      {showOtherSizes && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-          {otherPresets.map((s) => sizeRowBtn(s, false))}
-          <button
-            type="button"
-            onClick={() => changeSize('custom')}
-            style={{
-              ...S.sizeRow,
-              ...(sizeId === 'custom' ? S.sizeRowActive : {}),
-            }}
-          >
-            <span style={{ fontWeight: 600 }}>カスタム</span>
-          </button>
-        </div>
-      )}
       {sizeId === 'custom' && (
-        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10, padding: 12, background: '#fafafa', borderRadius: 9, border: '0.5px solid #efefef' }}>
+        <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 14, padding: 16, background: T.sidebar, borderRadius: 8, border: `0.5px solid ${T.border}` }}>
           <div style={S.ctrlRow}>
             <span style={{ fontSize: 13 }}>幅 (mm)</span>
-            <input type="number" value={customW} onChange={(e) => { setCustomW(Number(e.target.value)); setImages({}); }} style={S.numInput} />
+            <input type="number" value={customW} onChange={(e) => { setCustomW(Number(e.target.value)); setImages({}); setImageFitModes({}); }} style={S.numInput} />
           </div>
           <div style={S.ctrlRow}>
             <span style={{ fontSize: 13 }}>高さ (mm)</span>
-            <input type="number" value={customH} onChange={(e) => { setCustomH(Number(e.target.value)); setImages({}); }} style={S.numInput} />
+            <input type="number" value={customH} onChange={(e) => { setCustomH(Number(e.target.value)); setImages({}); setImageFitModes({}); }} style={S.numInput} />
           </div>
           <div>
             <div style={{ fontSize: 12, color: T.muted, marginBottom: 6 }}>穴の規格</div>
@@ -600,7 +565,7 @@ export default function RefillMaker() {
   );
 
   const orientBlockInner = (
-    <div style={{ display: 'flex', gap: 8 }}>
+    <div style={{ display: 'flex', gap: 12 }}>
       {[
         ['portrait', `A4縦 · ${calcLayout(refillW, refillH, 'portrait').total}枚`],
         ['landscape', `A4横 · ${calcLayout(refillW, refillH, 'landscape').total}枚`],
@@ -608,7 +573,7 @@ export default function RefillMaker() {
         <button
           key={val}
           type="button"
-          onClick={() => { setOrientation(val); setImages({}); setHolePositions({}); }}
+          onClick={() => { setOrientation(val); setImages({}); setHolePositions({}); setImageFitModes({}); }}
           style={{ ...S.pill, flex: 1, justifyContent: 'center', ...(orientation === val ? S.pillActive : {}) }}
         >
           {label}
@@ -619,7 +584,7 @@ export default function RefillMaker() {
 
   const holesBlockInner = (
     <>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 12 }}>
         <button type="button" onClick={() => setAllHoles('left')} style={{ ...S.pill, flex: 1, justifyContent: 'center' }}>
           すべて左
         </button>
@@ -628,7 +593,7 @@ export default function RefillMaker() {
         </button>
       </div>
       <p style={{ fontSize: 11, color: T.muted, margin: '8px 0 0', lineHeight: 1.4 }}>
-        見本の枠タップでも左右を変更できます。
+        画像カードごとにも左右を変更できます。
       </p>
     </>
   );
@@ -636,7 +601,7 @@ export default function RefillMaker() {
   const displayBlockInner = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={S.ctrlRow}>
-        <span style={{ fontSize: 13 }}>画像フィット</span>
+        <span style={{ fontSize: 13 }}>画像フィット初期値</span>
         <select value={fitMode} onChange={(e) => setFitMode(e.target.value)} style={S.select}>
           <option value="cover">トリミング</option>
           <option value="contain">全体表示</option>
@@ -656,105 +621,196 @@ export default function RefillMaker() {
 
   const imagesBlockInner = (
     <>
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(cols, 4)}, 1fr)`, gap: 10 }}>
-        {Array.from({ length: total }, (_, i) => (
-          <div
-            key={i}
-            role="button"
-            tabIndex={0}
-            onClick={() => { setActiveSlot(i); fileInputRef.current.click(); }}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveSlot(i); fileInputRef.current.click(); } }}
-            style={{
-              aspectRatio: `${refillW}/${refillH}`,
-              border: images[i] ? `2px solid ${T.primary}` : `2px dashed ${T.borderStrong}`,
-              borderRadius: 9,
-              cursor: 'pointer',
-              position: 'relative',
-              overflow: 'hidden',
-              background: images[i] ? '#fff' : '#faf9f6',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {images[i] ? (
-              <img src={images[i]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <span style={{ fontSize: 28, color: T.borderStrong, fontWeight: 300, lineHeight: 1 }}>+</span>
-            )}
-            {images[i] && (
+      {notice && (
+        <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 8, background: T.primaryLight, border: `0.5px solid ${T.border}`, fontSize: 13, color: T.inkSoft, lineHeight: 1.65 }}>
+          {notice}
+        </div>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+        <button type="button" onClick={() => fileInputMultiRef.current.click()} style={{ ...S.btn, ...S.btnGhostLine, margin: 0, fontSize: 14 }}>
+          まとめて選択
+        </button>
+        <button type="button" onClick={() => fileInputFillRef.current.click()} style={{ ...S.btn, ...S.btnGhostLine, margin: 0, fontSize: 14 }}>
+          1枚を全枠へ
+        </button>
+      </div>
+      <p style={{ margin: '0 0 18px', fontSize: 13, color: T.muted, lineHeight: 1.7 }}>
+        まとめて選択は最大{total}枚まで使います。多く選んだ場合は先頭{total}枚だけ配置します。
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? '1fr' : `repeat(${Math.min(cols, 3)}, minmax(0, 1fr))`, gap: 16 }}>
+        {Array.from({ length: total }, (_, i) => {
+          const slotFit = imageFitModes[i] || fitMode;
+          const hole = holePositions[i] || 'left';
+          return (
+            <div
+              key={i}
+              style={{
+                border: `0.5px solid ${images[i] ? T.borderStrong : T.border}`,
+                borderRadius: 8,
+                background: '#fff',
+                overflow: 'hidden',
+              }}
+            >
               <button
                 type="button"
-                aria-label="画像を削除"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setImages((prev) => { const n = { ...prev }; delete n[i]; return n; });
-                }}
+                onClick={() => openSlotImagePicker(i)}
                 style={{
-                  position: 'absolute',
-                  top: 6,
-                  right: 6,
-                  width: 22,
-                  height: 22,
-                  background: 'rgba(0,0,0,0.55)',
-                  color: '#fff',
+                  width: '100%',
+                  aspectRatio: `${refillW}/${refillH}`,
                   border: 'none',
-                  borderRadius: '50%',
-                  fontSize: 12,
+                  borderBottom: `0.5px solid ${T.border}`,
                   cursor: 'pointer',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  background: images[i] ? '#fff' : T.sidebar,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  padding: 0,
                 }}
               >
-                ×
+                {images[i] ? (
+                  <img src={images[i]} alt="" style={{ width: '100%', height: '100%', objectFit: slotFit === 'fill' ? 'fill' : slotFit }} />
+                ) : (
+                  <span style={{ fontSize: 28, color: T.hole, fontWeight: 300, lineHeight: 1 }}>+</span>
+                )}
+                <span style={{ position: 'absolute', left: 6, top: 6, padding: '2px 6px', borderRadius: 999, background: 'rgba(255,255,255,0.9)', color: T.hint, fontSize: 10, fontWeight: 700 }}>
+                  {i + 1}
+                </span>
               </button>
-            )}
-          </div>
-        ))}
+              <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 34, fontSize: 13, color: T.muted }}>穴</span>
+                  {['left', 'right'].map((pos) => (
+                    <button
+                      key={pos}
+                      type="button"
+                      onClick={() => setSlotHole(i, pos)}
+                      style={{
+                        ...S.smallToggle,
+                        ...(hole === pos ? S.smallToggleActive : {}),
+                      }}
+                    >
+                      {pos === 'left' ? '左' : '右'}
+                    </button>
+                  ))}
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 34, fontSize: 13, color: T.muted }}>表示</span>
+                  <select value={slotFit} onChange={(e) => setSlotFit(i, e.target.value)} style={{ ...S.select, flex: 1, fontSize: 13 }}>
+                    <option value="cover">トリミング</option>
+                    <option value="contain">全体表示</option>
+                    <option value="fill">引き伸ばし</option>
+                  </select>
+                </label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" disabled={!images[i]} onClick={() => copySlotToAll(i)} style={{ ...S.smallAction, opacity: images[i] ? 1 : 0.45 }}>
+                    全枠へ
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!images[i]}
+                    onClick={() => {
+                      setImages((prev) => { const n = { ...prev }; delete n[i]; return n; });
+                      setImageFitModes((prev) => { const n = { ...prev }; delete n[i]; return n; });
+                    }}
+                    style={{ ...S.smallAction, opacity: images[i] ? 1 : 0.45 }}
+                  >
+                    削除
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
       <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileInput} />
       <input ref={fileInputMultiRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleMultiInput} />
-      <button type="button" onClick={() => fileInputMultiRef.current.click()} style={{ ...S.btn, ...S.btnGhostLine, marginTop: 12 }}>
-        まとめて選択（最大{total}枚）
-      </button>
-    </>
-  );
-
-  const desktopAsideContent = (
-    <>
-      <GroupCard title="M5リフィルサイズ" icon={IcoRuler}>{sizeBlockInner}</GroupCard>
-      <GroupCard title="印刷向き" icon={IcoOrient}>{orientBlockInner}</GroupCard>
-      <GroupCard title="穴の位置" icon={IcoHole}>{holesBlockInner}</GroupCard>
-      <GroupCard title="画像" icon={IcoImage}>{imagesBlockInner}</GroupCard>
-      <GroupCard title="表示設定" icon={IcoDisplay}>{displayBlockInner}</GroupCard>
-      <GroupCard title="アクション" icon={IcoPrint}>{actionsBlock}</GroupCard>
-    </>
-  );
-
-  const mobileSettingsContent = (
-    <>
-      <GroupCard title="M5リフィルサイズ" icon={IcoRuler}>{sizeBlockInner}</GroupCard>
-      <GroupCard title="印刷向き" icon={IcoOrient}>{orientBlockInner}</GroupCard>
-      <GroupCard title="穴の位置" icon={IcoHole}>{holesBlockInner}</GroupCard>
-      <GroupCard title="表示設定" icon={IcoDisplay}>{displayBlockInner}</GroupCard>
+      <input ref={fileInputFillRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFillInput} />
     </>
   );
 
   const imageFilledCount = Object.values(images).filter(Boolean).length;
 
-  const renderPreviewPanel = ({ hideHeader = false } = {}) => (
+  const TOOL_PANELS = [
+    { id: 'size', title: 'リフィルサイズ', icon: IcoRuler },
+    { id: 'orientation', title: '向き', icon: IcoOrient },
+    { id: 'holes', title: '穴', icon: IcoHole },
+    { id: 'images', title: '画像', icon: IcoImage },
+    { id: 'display', title: 'プレビュー', icon: IcoDisplay },
+  ];
+
+  const controlPanelContent = {
+    size: <GroupCard title="リフィルサイズ" icon={IcoRuler}>{sizeBlockInner}</GroupCard>,
+    orientation: <GroupCard title="印刷向き" icon={IcoOrient}>{orientBlockInner}</GroupCard>,
+    holes: <GroupCard title="穴の位置" icon={IcoHole}>{holesBlockInner}</GroupCard>,
+    images: <GroupCard title={`${imageFilledCount}／${total} 枠に画像あり`} icon={IcoImage}>{imagesBlockInner}</GroupCard>,
+    display: <GroupCard title="プレビュー" icon={IcoDisplay}>{displayBlockInner}</GroupCard>,
+  };
+
+  const renderPanelNav = (compact = false) => (
+    <div
+      role="tablist"
+      aria-label="操作パネル"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${TOOL_PANELS.length}, minmax(0, 1fr))`,
+        gap: compact ? 4 : 10,
+        width: '100%',
+        padding: 0,
+        borderRadius: 0,
+        background: 'transparent',
+        borderBottom: `0.5px solid ${T.border}`,
+        marginBottom: compact ? 16 : 20,
+      }}
+    >
+      {TOOL_PANELS.map(({ id, title, icon }) => {
+        const active = activeToolPanel === id;
+        return (
+          <button
+            key={id}
+            role="tab"
+            type="button"
+            aria-selected={active}
+            onClick={() => setActiveToolPanel(id)}
+            style={{
+              minWidth: 0,
+              width: '100%',
+              border: 'none',
+              borderRadius: 0,
+              minHeight: 44,
+              padding: compact ? '10px 2px 9px' : '10px 2px 9px',
+              cursor: 'pointer',
+              fontFamily: T.font,
+              textAlign: 'center',
+              background: 'transparent',
+              boxShadow: 'none',
+              color: active ? T.ink : T.hint,
+              fontSize: compact ? 12 : 13,
+              fontWeight: active ? 500 : 400,
+              borderBottom: active ? `2px solid ${T.primary}` : '2px solid transparent',
+            }}
+          >
+            <span style={{ display: compact ? 'none' : 'inline-flex', marginRight: 5, verticalAlign: -2 }}>{icon}</span>
+            {title}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const renderPreviewPanel = ({ hideHeader = false, compact = false } = {}) => (
     <>
       {!hideHeader ? (
         <>
-          <h2 style={{ fontSize: 15, fontWeight: 600, color: T.ink, margin: '0 0 4px 0' }}>プレビュー</h2>
-          <p style={{ fontSize: 11, color: T.muted, margin: '0 0 16px 0' }}>
-            {orientation === 'portrait' ? 'A4縦' : 'A4横'} · 表示 {Math.round(scale * 100)}%
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: T.ink, margin: '0 0 6px 0' }}>プレビュー</h2>
+          <p style={{ fontSize: 11, color: T.hint, margin: '0 0 24px 0', lineHeight: 1.6, textAlign: 'center' }}>
+            {orientation === 'portrait' ? 'A4縦' : 'A4横'} · 表示{Math.round(scale * 100)}% · {sizePreset?.shortName || sizePreset?.name || 'カスタム'}サイズ
           </p>
         </>
       ) : (
-        <p style={{ fontSize: 11, color: T.muted, margin: '0 0 12px', textAlign: 'center', alignSelf: 'stretch' }}>
-          {orientation === 'portrait' ? 'A4縦' : 'A4横'} · 表示 {Math.round(scale * 100)}%
+        <p style={{ fontSize: 11, color: T.hint, margin: compact ? '0 0 10px' : '0 0 16px', textAlign: 'center', alignSelf: 'stretch', lineHeight: 1.6 }}>
+          {orientation === 'portrait' ? 'A4縦' : 'A4横'} · 表示{Math.round(scale * 100)}% · {sizePreset?.shortName || sizePreset?.name || 'カスタム'}サイズ
         </p>
       )}
       <div style={{ width: paperW_px * scale, height: paperH_px * scale, flexShrink: 0, position: 'relative', margin: '0 auto' }}>
@@ -765,7 +821,7 @@ export default function RefillMaker() {
             width: paperW_px,
             height: paperH_px,
             background: '#fff',
-            boxShadow: '0 8px 32px rgba(91, 122, 166, 0.12)',
+            boxShadow: 'none',
             position: 'absolute',
             top: 0,
             left: 0,
@@ -780,22 +836,23 @@ export default function RefillMaker() {
             const x = marginX_px + col * refillW_px;
             const y = marginY_px + row * refillH_px;
             const hPos = holePositions[i] || 'left';
+            const slotFit = imageFitModes[i] || fitMode;
 
             return (
               <div
                 key={i}
                 data-refill="sheet-cell"
-                onClick={() => toggleHole(i)}
-                title="クリックで穴の位置を左右切替"
+                onClick={() => openSlotImagePicker(i)}
+                title="画像を選択"
                 style={{
                   position: 'absolute',
                   left: x,
                   top: y,
                   width: refillW_px,
                   height: refillH_px,
-                  border: showBorder ? '1px solid #d8d4ce' : '1px solid transparent',
+                  border: showBorder ? `0.5px solid ${T.border}` : '0.5px solid transparent',
                   overflow: 'hidden',
-                  background: '#f8f8f8',
+                  background: T.sidebar,
                   cursor: 'pointer',
                   boxSizing: 'border-box',
                 }}
@@ -809,9 +866,9 @@ export default function RefillMaker() {
                       bottom: 0,
                       [hPos]: 0,
                       width: holeZone_px,
-                      background: '#efefef',
-                      borderRight: hPos === 'left' ? '1px dashed #c4c0ba' : 'none',
-                      borderLeft: hPos === 'right' ? '1px dashed #c4c0ba' : 'none',
+                      background: T.sidebar,
+                      borderRight: hPos === 'left' ? `0.5px dashed ${T.hole}` : 'none',
+                      borderLeft: hPos === 'right' ? `0.5px dashed ${T.hole}` : 'none',
                       zIndex: 2,
                     }}
                   >
@@ -826,8 +883,8 @@ export default function RefillMaker() {
                           width: 12,
                           height: 12,
                           borderRadius: '50%',
-                          border: '1px solid #b8b4ae',
-                          background: '#fff',
+                          border: `0.5px solid ${T.hole}`,
+                          background: T.sidebar,
                         }}
                       />
                     ))}
@@ -841,6 +898,9 @@ export default function RefillMaker() {
                     left: hPos === 'left' ? imageStart_px : 0,
                     right: hPos === 'right' ? imageStart_px : 0,
                     overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
                   {images[i] ? (
@@ -854,13 +914,18 @@ export default function RefillMaker() {
                         backgroundRepeat: 'no-repeat',
                         backgroundPosition: 'center',
                         backgroundSize:
-                          fitMode === 'cover' ? 'cover' : fitMode === 'contain' ? 'contain' : '100% 100%',
+                          slotFit === 'cover' ? 'cover' : slotFit === 'contain' ? 'contain' : '100% 100%',
                       }}
                     />
                   ) : (
-                    <span className="refill-capture-hide" style={{ fontFamily: 'system-ui, sans-serif', fontSize: 22, color: '#d0ccc6', fontWeight: 500 }}>
-                      {i + 1}
-                    </span>
+                    <>
+                      <span className="refill-capture-hide" style={{ position: 'absolute', left: 7, top: 5, fontFamily: 'system-ui, sans-serif', fontSize: 10, color: T.hint, fontWeight: 500, zIndex: 3 }}>
+                        {i + 1}
+                      </span>
+                      <span className="refill-capture-hide" style={{ fontFamily: 'system-ui, sans-serif', fontSize: 28, color: T.hole, fontWeight: 300, lineHeight: 1 }}>
+                        +
+                      </span>
+                    </>
                   )}
                 </div>
               </div>
@@ -870,7 +935,7 @@ export default function RefillMaker() {
       </div>
       <div
         style={{
-          marginTop: 16,
+          marginTop: compact ? 14 : 24,
           display: 'inline-flex',
           alignSelf: 'center',
           padding: '7px 16px',
@@ -879,7 +944,7 @@ export default function RefillMaker() {
           border: `1px solid ${T.border}`,
           fontSize: 12,
           color: T.inkSoft,
-          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+          boxShadow: 'none',
         }}
       >
         {statusPill}
@@ -887,24 +952,18 @@ export default function RefillMaker() {
     </>
   );
 
-  const MOB_SEGMENTS = [
-    { id: 'setup', title: '準備' },
-    { id: 'images', title: '写真' },
-    { id: 'preview', title: '確認' },
-  ];
-
   const mobileStickyBar = (
     <div
       style={{
         flexShrink: 0,
         background: '#fff',
         borderTop: `1px solid ${T.border}`,
-        padding: '10px 12px',
-        paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
-        boxShadow: '0 -4px 20px rgba(42,36,32,0.06)',
+        padding: '12px 16px',
+        paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
+        boxShadow: 'none',
       }}
     >
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 12 }}>
         <button
           type="button"
           disabled={printBusy}
@@ -932,12 +991,8 @@ export default function RefillMaker() {
         type="button"
         onClick={clearAll}
         style={{
-          ...S.btn,
-          ...S.btnGhostMuted,
-          marginTop: 8,
-          padding: '8px',
-          fontSize: 12,
-          fontWeight: 500,
+          ...S.clearLink,
+          marginTop: 10,
         }}
       >
         すべてクリア
@@ -946,24 +1001,26 @@ export default function RefillMaker() {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', fontFamily: T.font, background: T.sidebar, color: T.ink }}>
-      <AppHeader title="リフィルコラージュ" subtitle="M5 · 62×105mm · 穴5 · マイクロ5" />
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', fontFamily: T.font, background: T.sidebar, color: T.ink, lineHeight: 1.6 }}>
+      <AppHeader title="リフィルコラージュ" subtitle="写真をリフィルに並べてA4印刷" />
 
       {!isNarrow ? (
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
           <aside
             style={{
-              width: 300,
+              width: 384,
               flexShrink: 0,
               background: T.sidebar,
-              borderRight: `1px solid ${T.border}`,
+              borderRight: `0.5px solid ${T.border}`,
               overflowY: 'auto',
-              padding: '14px 12px 22px',
+              padding: '24px 20px 32px',
               display: 'flex',
               flexDirection: 'column',
             }}
           >
-            {desktopAsideContent}
+            {renderPanelNav(false)}
+            <div>{controlPanelContent[activeToolPanel]}</div>
+            <GroupCard title="アクション" icon={IcoPrint}>{actionsBlock}</GroupCard>
           </aside>
           <div
             ref={previewWrapRef}
@@ -974,7 +1031,7 @@ export default function RefillMaker() {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              padding: '28px 24px 40px',
+              padding: '40px 32px 48px',
             }}
           >
             {renderPreviewPanel()}
@@ -983,115 +1040,35 @@ export default function RefillMaker() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <div
+            ref={previewWrapRef}
             style={{
               flexShrink: 0,
-              background: T.sidebar,
-              padding: '6px 10px 8px',
-              borderBottom: `1px solid ${T.border}`,
+              height: '40vh',
+              minHeight: 250,
+              maxHeight: 360,
+              overflow: 'auto',
+              background: T.previewBg,
+              padding: '14px 12px 18px',
+              borderBottom: `0.5px solid ${T.border}`,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
             }}
           >
-            <div
-              role="tablist"
-              aria-label="作業ステップ"
-              style={{
-                display: 'flex',
-                gap: 3,
-                padding: 3,
-                borderRadius: 11,
-                background: '#d9d5cd',
-              }}
-            >
-              {MOB_SEGMENTS.map(({ id, title }) => {
-                const active = activeMobileSection === id;
-                return (
-                  <button
-                    key={id}
-                    role="tab"
-                    type="button"
-                    aria-selected={active}
-                    onClick={() => scrollToMobileSection(id)}
-                    style={{
-                      flex: 1,
-                      border: 'none',
-                      borderRadius: 9,
-                      padding: '10px 4px',
-                      cursor: 'pointer',
-                      fontFamily: T.font,
-                      background: active ? '#fff' : 'transparent',
-                      boxShadow: active ? '0 1px 3px rgba(42,36,32,0.1)' : 'none',
-                      transition: 'background 120ms ease, box-shadow 120ms ease',
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: 'block',
-                        fontSize: 13,
-                        fontWeight: active ? 700 : 600,
-                        color: active ? T.ink : T.muted,
-                        lineHeight: 1.25,
-                      }}
-                    >
-                      {title}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            {renderPreviewPanel({ hideHeader: true, compact: true })}
           </div>
           <div
-            ref={mobileScrollRootRef}
             style={{
               flex: 1,
               overflowY: 'auto',
               minHeight: 0,
-              scrollPaddingTop: 12,
               WebkitOverflowScrolling: 'touch',
-              paddingBottom: 'calc(120px + env(safe-area-inset-bottom, 0px))',
+              paddingBottom: 'calc(136px + env(safe-area-inset-bottom, 0px))',
             }}
           >
-            <div style={{ padding: '12px 12px 6px', maxWidth: 560, margin: '0 auto' }}>
-              <section
-                ref={setupSectionRef}
-                style={{ scrollMarginTop: 8, marginBottom: 18 }}
-              >
-                <div style={{ marginBottom: 12 }}>
-                  <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: T.ink, letterSpacing: '-0.01em' }}>準備</h2>
-                  <p style={{ margin: '3px 0 0', fontSize: 12, color: T.muted, lineHeight: 1.45 }}>サイズ・向き・穴・枠線</p>
-                </div>
-                {mobileSettingsContent}
-              </section>
-              <section
-                ref={imagesSectionRef}
-                style={{ scrollMarginTop: 8, marginBottom: 18 }}
-              >
-                <div style={{ marginBottom: 12 }}>
-                  <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: T.ink, letterSpacing: '-0.01em' }}>写真</h2>
-                  <p style={{ margin: '3px 0 0', fontSize: 12, color: T.muted, lineHeight: 1.45 }}>
-                    {imageFilledCount}／{total} 枠
-                  </p>
-                </div>
-                <GroupCard title={`${total}枠に写真を配置`} icon={IcoImage}>{imagesBlockInner}</GroupCard>
-              </section>
-              <section ref={previewSectionRef} style={{ scrollMarginTop: 8, marginBottom: 8 }}>
-                <div style={{ marginBottom: 12 }}>
-                  <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: T.ink, letterSpacing: '-0.01em' }}>確認</h2>
-                  <p style={{ margin: '3px 0 0', fontSize: 12, color: T.muted, lineHeight: 1.45 }}>見本です。印刷・PDFは下のボタン。</p>
-                </div>
-                <div
-                  ref={previewWrapRef}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: '8px 0 20px',
-                    background: T.previewBg,
-                    borderRadius: 12,
-                    border: `0.5px solid ${T.border}`,
-                  }}
-                >
-                  {renderPreviewPanel({ hideHeader: true })}
-                </div>
-              </section>
+            <div style={{ padding: '16px 16px 8px', maxWidth: 560, margin: '0 auto' }}>
+              {renderPanelNav(true)}
+              {controlPanelContent[activeToolPanel]}
             </div>
           </div>
           {mobileStickyBar}
@@ -1101,37 +1078,94 @@ export default function RefillMaker() {
   );
 }
 
+function GroupCard({ title, icon, children }) {
+  return (
+    <section
+      style={{
+        border: '0.5px solid var(--brand-border)',
+        borderRadius: 8,
+        padding: 20,
+        marginBottom: 20,
+        background: '#fff',
+        boxSizing: 'border-box',
+        lineHeight: 1.65,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+        <span
+          aria-hidden
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            background: 'var(--brand-surface)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </span>
+        <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: '0.01em', color: T.ink }}>{title}</span>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 const S = {
   sizeRow: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    padding: '12px 14px',
-    borderRadius: 9,
-    border: '0.5px solid #efefef',
+    minHeight: 44,
+    padding: '14px 16px',
+    borderRadius: 8,
+    border: '0.5px solid var(--brand-border-md)',
     background: '#fff',
     cursor: 'pointer',
     fontSize: 14,
+    lineHeight: 1.6,
     textAlign: 'left',
     color: T.ink,
     boxSizing: 'border-box',
   },
   sizeRowActive: {
-    background: T.ink,
-    color: '#faf7f2',
-    borderColor: T.ink,
+    background: T.primaryLight,
+    color: T.ink,
+    borderColor: T.borderStrong,
     boxShadow: 'none',
+  },
+  sizeGridButton: {
+    width: '100%',
+    minHeight: 76,
+    padding: '14px 8px',
+    borderRadius: 8,
+    border: '0.5px solid var(--brand-border-md)',
+    background: '#fff',
+    cursor: 'pointer',
+    color: T.ink,
+    boxSizing: 'border-box',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center',
+    fontFamily: T.font,
   },
   pill: {
     display: 'flex',
     alignItems: 'center',
-    padding: '10px 12px',
-    borderRadius: 9,
-    border: '0.5px solid #efefef',
+    minHeight: 44,
+    padding: '10px 14px',
+    borderRadius: 8,
+    border: '0.5px solid var(--brand-border-md)',
     background: '#fff',
     cursor: 'pointer',
-    fontSize: 13,
+    fontSize: 14,
+    lineHeight: 1.6,
     color: T.ink,
     boxSizing: 'border-box',
   },
@@ -1141,31 +1175,69 @@ const S = {
     borderColor: T.ink,
     fontWeight: 600,
   },
-  ctrlRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  numInput: { border: '0.5px solid #efefef', borderRadius: 8, padding: '6px 10px', fontSize: 13, width: 76, background: '#fff' },
-  select: { border: '0.5px solid #efefef', borderRadius: 8, padding: '6px 10px', fontSize: 13, background: '#fff', color: T.ink },
+  smallToggle: {
+    flex: 1,
+    minHeight: 44,
+    padding: '8px 10px',
+    borderRadius: 8,
+    border: '0.5px solid var(--brand-border-md)',
+    background: '#fff',
+    color: T.muted,
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 600,
+    fontFamily: T.font,
+  },
+  smallToggleActive: {
+    background: T.primaryLight,
+    color: T.ink,
+    borderColor: T.borderStrong,
+  },
+  smallAction: {
+    flex: 1,
+    minHeight: 44,
+    padding: '9px 10px',
+    borderRadius: 8,
+    border: '0.5px solid var(--brand-border-md)',
+    background: '#fff',
+    color: T.inkSoft,
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 600,
+    fontFamily: T.font,
+  },
+  ctrlRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, lineHeight: 1.6 },
+  numInput: { minHeight: 44, border: '0.5px solid var(--brand-border-md)', borderRadius: 8, padding: '8px 12px', fontSize: 14, width: 84, background: '#fff', boxSizing: 'border-box' },
+  select: { minHeight: 44, border: '0.5px solid var(--brand-border-md)', borderRadius: 8, padding: '8px 12px', fontSize: 14, background: '#fff', color: T.ink, boxSizing: 'border-box' },
   btn: {
     width: '100%',
-    padding: '12px 14px',
+    minHeight: 44,
+    padding: 13,
     border: 'none',
-    borderRadius: 9,
+    borderRadius: 8,
     fontSize: 14,
-    fontWeight: 600,
+    fontWeight: 500,
     cursor: 'pointer',
     fontFamily: T.font,
     boxSizing: 'border-box',
   },
-  btnPrimary: { background: T.ink, color: '#faf7f2', boxShadow: 'none' },
+  btnPrimary: { background: T.primary, color: T.primaryText, boxShadow: 'none' },
   btnGhostLine: {
-    background: '#fff',
-    color: T.primary,
-    border: '0.5px solid #efefef',
-    fontWeight: 600,
-  },
-  btnGhostMuted: {
-    background: 'transparent',
-    color: T.muted,
-    border: '0.5px solid #efefef',
+    background: T.primaryLight,
+    color: T.ink,
+    border: `0.5px solid ${T.borderStrong}`,
     fontWeight: 500,
+  },
+  clearLink: {
+    width: '100%',
+    padding: '8px 0',
+    background: 'transparent',
+    color: T.hint,
+    border: 'none',
+    fontSize: 12,
+    fontWeight: 400,
+    cursor: 'pointer',
+    fontFamily: T.font,
+    boxSizing: 'border-box',
   },
 };

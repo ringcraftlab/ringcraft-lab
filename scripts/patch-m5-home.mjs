@@ -66,7 +66,7 @@ const heroBlock = `      <section
               padding: '14px 28px',
               borderRadius: r,
               background: C.text,
-              color: '#faf7f2',
+              color: '#fff',
               fontSize: 15,
               fontWeight: 700,
               textDecoration: 'none',
@@ -85,7 +85,7 @@ let out = base
     "import { T } from '../theme/appTheme';\n\nconst heroSrc = `${import.meta.env.BASE_URL}hero-desk.jpg`;"
   )
   .replace("bg: '#ffffff'", "bg: '#faf7f2'")
-  .replace("bgSub: '#f7f7f7'", "bgSub: '#f3efe8'")
+  .replace("bgSub: '#f7f7f7'", "bgSub: '#f5ede0'")
   .replace(
     /const SIZE_CARDS[\s\S]*?const STEPS = \[[\s\S]*?\];/,
     `const M5 = SIZES.find((s) => s.id === 'microfive');

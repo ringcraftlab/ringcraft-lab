@@ -12,14 +12,14 @@ const heroSrc = \`\${import.meta.env.BASE_URL}hero-desk.jpg\`;
 
 const C = {
   bg: '#faf7f2',
-  ink: '#2a2420',
-  muted: '#6b635c',
-  border: '#e8e2d9',
-  link: '#4a5f78',
+  ink: '#3d2f1f',
+  muted: '#9c7d5e',
+  border: '#e0d9cf',
+  link: '#a07850',
 };
 
 const font = T.font;
-const bd = \`0.5px solid \${C.border}\`;
+const bd = \`1px solid \${C.border}\`;
 
 const OTHER_SIZES = SIZES.filter((s) => s.id !== 'microfive' && s.id !== 'custom');
 

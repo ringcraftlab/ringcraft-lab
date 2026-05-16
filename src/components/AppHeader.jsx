@@ -6,15 +6,18 @@ export default function AppHeader({ title, subtitle, showBack = true, variant = 
   return (
     <header
       style={{
-        background: desk ? '#faf7f2' : T.primary,
-        color: desk ? '#2a2420' : '#fff',
-        padding: '14px 20px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 20,
+        background: '#fff',
+        color: T.ink,
+        padding: '10px 16px',
         display: 'flex',
         alignItems: 'center',
-        gap: 14,
+        gap: 12,
         flexShrink: 0,
-        borderBottom: desk ? '0.5px solid #e8e2d9' : 'none',
-        boxShadow: desk ? 'none' : '0 2px 12px rgba(91, 127, 166, 0.25)',
+        borderBottom: `0.5px solid ${T.border}`,
+        boxShadow: 'none',
       }}
     >
       {showBack ? (
@@ -22,30 +25,53 @@ export default function AppHeader({ title, subtitle, showBack = true, variant = 
           <Link
             to="/"
             style={{
-              color: desk ? '#6b635c' : 'rgba(255,255,255,0.88)',
+              color: T.muted,
               textDecoration: 'none',
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: 500,
+              minHeight: 44,
+              display: 'inline-flex',
+              alignItems: 'center',
             }}
           >
             ← ホーム
           </Link>
-          <div style={{ width: 1, height: 22, background: desk ? '#e8e2d9' : 'rgba(255,255,255,0.25)' }} />
+          <div style={{ width: 1, height: 24, background: T.border }} />
         </>
       ) : null}
+      <span
+        aria-hidden
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 8,
+          background: T.ink,
+          color: T.primaryLight,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M7 4h9.5A2.5 2.5 0 0 1 19 6.5v13A1.5 1.5 0 0 1 17.5 21H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.7" />
+          <path d="M8.5 4v17M11 8h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </span>
       <div>
         {desk ? null : (
           <div style={{ fontSize: 10, opacity: 0.85, letterSpacing: '0.18em', fontWeight: 600 }}>RINGCRAFT LAB</div>
         )}
-        <h1 style={{ fontSize: desk ? 16 : 17, fontWeight: 600, margin: desk ? 0 : '2px 0 0 0', letterSpacing: '0.02em' }}>{title}</h1>
+        <h1 style={{ fontSize: 15, fontWeight: 500, margin: 0, letterSpacing: '0.01em', color: T.ink }}>{title}</h1>
         {subtitle ? (
           <p
             style={{
               fontSize: 12,
-              color: desk ? '#6b635c' : undefined,
-              opacity: desk ? 1 : 0.88,
-              margin: '6px 0 0 0',
+              color: T.hint,
+              opacity: 1,
+              margin: '4px 0 0 0',
               fontWeight: 400,
+              lineHeight: 1.45,
             }}
           >
             {subtitle}

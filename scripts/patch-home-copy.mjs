@@ -5,23 +5,20 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const jsx = `import { Link } from 'react-router-dom';
-import { SIZES } from '../config/sizes';
 import { T } from '../theme/appTheme';
 
 const heroSrc = \`\${import.meta.env.BASE_URL}hero-desk.jpg\`;
 
 const C = {
   bg: '#faf7f2',
-  ink: '#2a2420',
-  muted: '#6b635c',
-  border: '#e8e2d9',
-  link: '#4a5f78',
+  ink: '#3d2f1f',
+  muted: '#9c7d5e',
+  border: '#e0d9cf',
+  link: '#a07850',
 };
 
 const font = T.font;
-const bd = \`0.5px solid \${C.border}\`;
-
-const OTHER_SIZES = SIZES.filter((s) => s.id !== 'microfive' && s.id !== 'custom');
+const bd = \`1px solid \${C.border}\`;
 
 function IcoCollage({ className }) {
   return (
@@ -49,17 +46,26 @@ function IcoPen({ className }) {
 
 const TOOL_CARDS = [
   {
-    to: '/refill-maker?size=microfive',
+    to: '/tool',
     title: '\u30ea\u30d5\u30a3\u30eb\u30b3\u30e9\u30fc\u30b8\u30e5',
-    desc: '\u5199\u771f\u3084\u30b9\u30af\u30b7\u30e7\u3092\u30ea\u30d5\u30a3\u30eb\u306b\u4e26\u3079\u3001A4\u3067\u5370\u5237\u3002',
+    desc: '\u753b\u50cf\u3092\u30ea\u30d5\u30a3\u30eb\u306b\u4e26\u3079\u3066\u3001A4\u3067\u5370\u5237\u3002',
     primary: true,
     Icon: IcoCollage,
   },
+  /*
   {
     to: '/pen-search',
     title: '\u30da\u30f3\u3092\u63a2\u3059',
     desc: 'M5\u306b\u5408\u3046\u30b3\u30f3\u30d1\u30af\u30c8\u306a\u30da\u30f3\u3092\u63a2\u3059\u3002',
     primary: false,
+    Icon: IcoPen,
+  },
+  */
+  {
+    title: '\u304a\u3059\u3059\u3081\u624b\u5e33\u95a2\u9023\u30b0\u30c3\u30ba',
+    desc: '\u30da\u30f3\u3001\u624b\u5e33\u3001\u30ea\u30d5\u30a3\u30eb\u3001\u4e07\u5e74\u7b46\u306a\u3069\u3002',
+    primary: false,
+    comingSoon: true,
     Icon: IcoPen,
   },
 ];
@@ -68,9 +74,27 @@ export default function Home() {
   return (
     <motionWrap className="home-page" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: font, color: C.ink, background: C.bg }}>
 
-      <header style={{ padding: '16px clamp(20px,4vw,48px) 12px', borderBottom: bd }}>
-        <motionWrap style={{ maxWidth: 1000, margin: '0 auto' }}>
-          <Link to="/" style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.06em', color: C.ink, textDecoration: 'none' }}>
+      <header style={{ padding: '14px clamp(20px,4vw,48px)', borderBottom: bd, background: '#fff' }}>
+        <motionWrap style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 16 }}>
+          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 15, fontWeight: 500, color: C.ink, textDecoration: 'none' }}>
+            <span
+              aria-hidden
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: C.ink,
+                color: '#f5ede0',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M7 4h9.5A2.5 2.5 0 0 1 19 6.5v13A1.5 1.5 0 0 1 17.5 21H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.7" />
+                <path d="M8.5 4v17M11 8h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </span>
             RingCraft Lab
           </Link>
         </motionWrap>
@@ -79,28 +103,23 @@ export default function Home() {
       <section className="home-hero" style={{ flex: 1, background: C.bg }}>
         <motionWrap className="home-hero__visual">
           <h2 className="home-hero__photo-title">
-            <span className="home-hero__photo-title-line">M5\u624b\u5e33\u3001\u5927\u597d\u304d\u3002</span>
-            <span className="home-hero__photo-title-line home-hero__photo-title-line--sub">\u305d\u3093\u306a\u3042\u306a\u305f\u3078\u3002</span>
+            <span className="home-hero__photo-title-line">\u624b\u5e33\u306e\u30ea\u30d5\u30a3\u30eb\u3092\u3001</span>
+            <span className="home-hero__photo-title-line home-hero__photo-title-line--sub">\u3082\u3063\u3068\u7c21\u5358\u306b\u3002</span>
           </h2>
           <motionWrap className="home-hero__photo">
-            <img src={heroSrc} alt="\u673a\u306e\u4e0a\u306eM5\u624b\u5e33\u3068\u6587\u5177" />
+            <img src={heroSrc} alt="\u673a\u306e\u4e0a\u306e\u624b\u5e33\u3068\u6587\u5177" />
           </motionWrap>
         </motionWrap>
 
         <motionWrap className="home-hero__panel">
           <motionWrap className="home-copy">
             <p className="home-copy__stanza">
-              \u5c0f\u3055\u304f\u3066\u3001\u304b\u308f\u3044\u3044\u76f8\u68d2\u3002
+              \u753b\u50cf\u3092\u4e26\u3079\u3066\u3001A4\u3067\u5370\u5237\u3002
               <br />
-              \u6c17\u3065\u304f\u3068\u3001\u3044\u3064\u3082\u305d\u3070\u306b\u3044\u308b\u3002
-            </p>
-            <p className="home-copy__stanza">
-              \u304a\u6c17\u306b\u5165\u308a\u306e\u7d19\u3001\u304a\u6c17\u306b\u5165\u308a\u306e\u5199\u771f\u3001\u304a\u6c17\u306b\u5165\u308a\u306e\u30da\u30f3\u3002
-              <br />
-              \u597d\u304d\u306a\u3082\u306e\u3092\u3001\u305d\u3063\u3068\u6301\u3061\u6b69\u304f\u3002
+              M5\u30fbM6\u30fb\u30d0\u30a4\u30d6\u30eb\u30fbA5\u306b\u5bfe\u5fdc\u3002
             </p>
             <p className="home-copy__closing">
-              \u305d\u306e\u3053\u3060\u308f\u308a\u306e\u3001\u52a9\u3051\u306b\u306a\u308c\u305f\u3089\u3046\u308c\u3057\u3044\u3002
+              \u624b\u5e33\u3065\u304f\u308a\u306e\u6642\u9593\u3092\u3001\u5c11\u3057\u3060\u3051\u5fc3\u5730\u3088\u304f\u3002
             </p>
           </motionWrap>
 
@@ -108,6 +127,7 @@ export default function Home() {
             {TOOL_CARDS.map((t) => {
               const Icon = t.Icon;
               return (
+                t.to ? (
                 <Link
                   key={t.to}
                   to={t.to}
@@ -122,29 +142,41 @@ export default function Home() {
                   >
                     <Icon className="home-hero-tool-card__icon" />
                   </div>
-                  <h3 className="home-hero-tool-card__title">{t.title}</h3>
-                  <p className="home-hero-tool-card__desc">{t.desc}</p>
-                  <span className="home-hero-tool-card__hint">\u958b\u304f</span>
+                  <motionWrap className="home-hero-tool-card__body">
+                    <h3 className="home-hero-tool-card__title">{t.title}</h3>
+                    <p className="home-hero-tool-card__desc">{t.desc}</p>
+                  </motionWrap>
+                  <span className="home-hero-tool-card__hint">\u2192</span>
                 </Link>
+                ) : (
+                <motionWrap
+                  key={t.title}
+                  className="home-hero-tool-card home-hero-tool-card--disabled"
+                  aria-disabled="true"
+                >
+                  <motionWrap className="home-hero-tool-card__icon-wrap">
+                    <Icon className="home-hero-tool-card__icon" />
+                  </motionWrap>
+                  <motionWrap className="home-hero-tool-card__body">
+                    <h3 className="home-hero-tool-card__title">{t.title}</h3>
+                    <p className="home-hero-tool-card__desc">{t.desc}</p>
+                  </motionWrap>
+                  <span className="home-hero-tool-card__badge">\u6e96\u5099\u4e2d</span>
+                </motionWrap>
+                )
               );
             })}
           </motionWrap>
-
-          <p className="home-other-sizes">
-            \u30ea\u30d5\u30a3\u30eb\u306f M6\u30fb\u30d0\u30a4\u30d6\u30eb\u30fbA5 \u306b\u3082\u5bfe\u5fdc\u3002
-            {OTHER_SIZES.map((s, i) => (
-              <span key={s.id}>
-                {i === 0 ? ' ' : ' \u00b7 '}
-                <Link to={\`/refill-maker?size=\${s.id}\`}>{s.name}</Link>
-              </span>
-            ))}
-          </p>
         </motionWrap>
       </section>
 
       <footer style={{ padding: '24px 20px calc(24px + env(safe-area-inset-bottom, 0px))', borderTop: bd }}>
-        <p style={{ fontSize: 12, color: C.muted, textAlign: 'center', margin: 0, opacity: 0.75 }}>
-          \u00a9 2025 RingCraft Lab
+        <p style={{ fontSize: 12, color: C.muted, textAlign: 'center', margin: 0, opacity: 0.85 }}>
+          \u00a9 RingCraft Lab
+          <span style={{ margin: '0 8px' }}>\u00b7</span>
+          <Link to="/tool" style={{ color: C.muted, textDecoration: 'none' }}>\u30ea\u30d5\u30a3\u30eb\u30b3\u30e9\u30fc\u30b8\u30e5</Link>
+          <span style={{ margin: '0 8px' }}>\u00b7</span>
+          <Link to="/goods" style={{ color: C.muted, textDecoration: 'none' }}>\u30b0\u30c3\u30ba\uff08\u6e96\u5099\u4e2d\uff09</Link>
         </p>
       </footer>
     </motionWrap>

@@ -1,0 +1,3059 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pen Image Review</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #2d261f;
+      background: #f7f1e8;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: end;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 40px);
+      letter-spacing: -0.04em;
+    }
+    .summary {
+      margin: 6px 0 0;
+      color: #6b5f53;
+      font-size: 14px;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin: 0 0 18px;
+      padding: 12px;
+      border: 1px solid rgba(91, 73, 51, 0.16);
+      border-radius: 18px;
+      background: rgba(247, 241, 232, 0.94);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 12px 32px rgba(62, 45, 24, 0.08);
+    }
+    label {
+      display: grid;
+      gap: 4px;
+      color: #6b5f53;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    select,
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid rgba(91, 73, 51, 0.18);
+      border-radius: 12px;
+      padding: 9px 10px;
+      background: #fffaf3;
+      color: #2d261f;
+      font: inherit;
+      font-size: 13px;
+    }
+    .count {
+      display: flex;
+      align-items: end;
+      color: #5d4e3e;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      overflow: hidden;
+      border: 1px solid rgba(91, 73, 51, 0.16);
+      border-radius: 18px;
+      background: rgba(255, 252, 247, 0.92);
+      box-shadow: 0 14px 36px rgba(62, 45, 24, 0.08);
+    }
+    .image {
+      display: grid;
+      place-items: center;
+      height: 160px;
+      background: #efe3d3;
+    }
+    .image img {
+      max-width: 100%;
+      max-height: 160px;
+      object-fit: contain;
+      display: block;
+    }
+    .placeholder {
+      padding: 18px;
+      color: #8a7762;
+      text-align: center;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .body {
+      padding: 14px;
+    }
+    .brand {
+      color: #8a7762;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .model {
+      margin: 4px 0 10px;
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .pill {
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: #f2e6d5;
+      color: #5d4e3e;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .pill.active { background: #dff1df; color: #245b31; }
+    .pill.review { background: #fff0c6; color: #72540b; }
+    .pill.discontinued { background: #eadfea; color: #68466b; }
+    .pill.exclude { background: #f5d8d3; color: #7b332a; }
+    .pill.fit-compact { background: #dff1df; color: #245b31; }
+    .pill.fit-comfortable { background: #e6f0d6; color: #435c20; }
+    .pill.fit-tight { background: #fff0c6; color: #72540b; }
+    .pill.fit-over { background: #f5d8d3; color: #7b332a; }
+    .links {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    a {
+      color: inherit;
+    }
+    .link {
+      border: 1px solid rgba(91, 73, 51, 0.16);
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: #fffaf3;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      text-decoration: none;
+    }
+    .note {
+      margin-top: 10px;
+      color: #756857;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Pen Image Review</h1>
+      <p class="summary">127 cards / active 78 / 26 direct thumbnails. Duplicate rows are hidden.</p>
+    </div>
+  </header>
+  <section class="toolbar" aria-label="review filters">
+    <label>
+      status
+      <select id="statusFilter">
+        <option value="active" selected>activeだけ</option>
+        <option value="">全部</option>
+        <option value="review">review</option>
+        <option value="discontinued">discontinued</option>
+        <option value="exclude">exclude</option>
+      </select>
+    </label>
+    <label>
+      type
+      <select id="typeFilter">
+        <option value="">全部</option>
+        <option value="ボールペン">ボールペン</option>
+        <option value="シャープペン">シャープペン</option>
+        <option value="万年筆">万年筆</option>
+        <option value="ローラーボール">ローラーボール</option>
+      </select>
+    </label>
+    <label>
+      fit
+      <select id="fitFilter">
+        <option value="">全部</option>
+        <option value="compact">はみ出しにくい -110mm</option>
+        <option value="comfortable">だいたい収まる 111-125mm</option>
+        <option value="tight">少し大きめ 126-130mm</option>
+        <option value="over">はみ出し注意 131mm-</option>
+      </select>
+    </label>
+    <label>
+      image
+      <select id="imageFilter">
+        <option value="">全部</option>
+        <option value="yes">画像あり</option>
+        <option value="no">画像なし</option>
+      </select>
+    </label>
+    <label>
+      search
+      <input id="searchFilter" type="search" placeholder="ブランド・モデル・メモ">
+    </label>
+    <div class="count" id="visibleCount"></div>
+  </section>
+  <main class="grid">
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="anterique mini ballpoint pen ii mini ballpoint pen ii ボールペン active 販売店/卸サイトでmini ballpoint pen ii・mini bp10/bp20系は全長10cm、直径10mm、0.5mm芯 追加調査。通常のanterique bp1/bp2は141mmで対象外だが、mini系は130mm以下">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Anterique</div>
+        <div class="model">Mini Ballpoint Pen II</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">100mm / 径10mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Anterique%20Mini%20Ballpoint%20Pen%20II" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.toolstoliveby.com.tw/en/stationery/ball-pen-roller-pen/mark-style-days-x-anterique-mini-ballpoint-pen-ii/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Anterique%20Mini%20Ballpoint%20Pen%20II" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Anterique%20Mini%20Ballpoint%20Pen%20II/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。通常のAnterique BP1/BP2は141mmで対象外だが、Mini系は130mm以下</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="tight" data-image="no" data-search="antou pen c mini pen c mini ボールペン active makuake store：直径約11.5mm、長さ約129mm(収納時)、136mm(キャップを尻軸)、116mm(キャップなし) 追加調査。antouは台湾のデザイン文具ブランド。100種類以上の替芯対応">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">ANTOU</div>
+        <div class="model">Pen C mini</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">129mm / 径11.5mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=ANTOU%20Pen%20C%20mini" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://store.makuake.com/products/7864159961312" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=ANTOU%20Pen%20C%20mini" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/ANTOU%20Pen%20C%20mini/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。ANTOUは台湾のデザイン文具ブランド。100種類以上の替芯対応</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="tight" data-image="no" data-search="benu minima fountain pen minima fountain pen 万年筆 active jetpens：length capped 12.6cm、diameter max 17.0mm、grip 9.8mm 追加調査。benuの小型万年筆。キャップポスト不可">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">BENU</div>
+        <div class="model">Minima Fountain Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">126mm / 径17mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=BENU%20Minima%20Fountain%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.jetpens.com/BENU-Minima-Fountain-Pen-Black-Skull-Broad/pd/25600" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=BENU%20Minima%20Fountain%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/BENU%20Minima%20Fountain%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。BENUの小型万年筆。キャップポスト不可</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="compact" data-image="no" data-search="benu pixie fountain pen pixie fountain pen 万年筆 active goulet pens：length overall closed 90.6mm、posted 120.2mm、body 13.1mm、cap 17.8mm 追加調査。benuのポケット万年筆。径はキャップ最大径">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">BENU</div>
+        <div class="model">Pixie Fountain Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">90.6mm / 径17.8mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=BENU%20Pixie%20Fountain%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.gouletpens.com/products/benu-pixie-fountain-pen-smoky-black" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=BENU%20Pixie%20Fountain%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/BENU%20Pixie%20Fountain%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。BENUのポケット万年筆。径はキャップ最大径</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="comfortable" data-image="no" data-search="bigidesign ti pocket pro ti pocket pro ボールペン active 公式：短いリフィル104.5mm、長いリフィル118mm。胴軸9.7mm、グリップ11.6mm 追加調査。リフィルにより長さが可変、最大でも130mm以下">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">BIGiDESIGN</div>
+        <div class="model">Ti Pocket Pro</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">118mm / 径11.6mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=BIGiDESIGN%20Ti%20Pocket%20Pro" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://bigidesign.com/collections/under-120/products/ti-pocket-pro" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=BIGiDESIGN%20Ti%20Pocket%20Pro" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/BIGiDESIGN%20Ti%20Pocket%20Pro/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。リフィルにより長さが可変、最大でも130mm以下</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="tight" data-image="no" data-search="caran d&#39;ache 849 ballpoint 849 ballpoint ボールペン active goldspot pensほか複数ソース一致 ユーザー確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Caran d&#39;Ache</div>
+        <div class="model">849 Ballpoint</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">127mm / 径7.6mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Caran%20d&#39;Ache%20849%20Ballpoint" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Caran%20d&#39;Ache%20849%20Ballpoint" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Caran%20d&#39;Ache%20849%20Ballpoint" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Caran%20d&#39;Ache%20849%20Ballpoint/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="conklin minigraph ballpoint pen minigraph ballpoint pen ボールペン active pen boutique：matching twist ballpoint measures just under 4 inches、d1 refill対応 追加調査。conklin minigraphのボールペン版">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Conklin</div>
+        <div class="model">Minigraph Ballpoint Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">100mm / 径不明</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Conklin%20Minigraph%20Ballpoint%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.penboutique.com/products/conklin-minigraph-white-satin-ballpoint-pen" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Conklin%20Minigraph%20Ballpoint%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Conklin%20Minigraph%20Ballpoint%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。Conklin Minigraphのボールペン版</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="compact" data-image="no" data-search="conklin minigraph fountain pen minigraph fountain pen 万年筆 active write here：length closed 100mm、length posted 128mm。直径は元データ値 追加調査。conklinのポケット万年筆。元候補にも存在">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Conklin</div>
+        <div class="model">Minigraph Fountain Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">100mm / 径12mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Conklin%20Minigraph%20Fountain%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.writeherekitenow.co.uk/conklin-minigraph-fountain-pen.html" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Conklin%20Minigraph%20Fountain%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Conklin%20Minigraph%20Fountain%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。Conklinのポケット万年筆。元候補にも存在</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="tight" data-image="no" data-search="craft a outfit-l fountain pen outfit-l fountain pen 万年筆 active craft a公式ショップ：outfit-l 全長（保管時）129mm、筆記時キャップなし125mm、キャップ装着時164mm 追加調査。クラフトエーoutfit万年筆l。木軸/レジンなど個体差はあるがシリーズ寸法として公式表記あり">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Craft A</div>
+        <div class="model">OutFit-L Fountain Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">129mm / 径不明</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Craft%20A%20OutFit-L%20Fountain%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://crafta840129.thebase.in/categories/3243784" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Craft%20A%20OutFit-L%20Fountain%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Craft%20A%20OutFit-L%20Fountain%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。クラフトエーOutFit万年筆L。木軸/レジンなど個体差はあるがシリーズ寸法として公式表記あり</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="compact" data-image="no" data-search="craft a outfit-s fountain pen outfit-s fountain pen 万年筆 active craft a公式ショップ：outfit-s 全長（保管時）103mm、筆記時キャップなし100mm、キャップ装着時139mm 追加調査。クラフトエーoutfit万年筆s。590&amp;co.の旧商品では保管時105mm表記もあり、いずれも130mm以下">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Craft A</div>
+        <div class="model">OutFit-S Fountain Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">103mm / 径不明</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Craft%20A%20OutFit-S%20Fountain%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://crafta840129.thebase.in/categories/3243784" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Craft%20A%20OutFit-S%20Fountain%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Craft%20A%20OutFit-S%20Fountain%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。クラフトエーOutFit万年筆S。590&amp;Co.の旧商品では保管時105mm表記もあり、いずれも130mm以下</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="tight" data-image="no" data-search="craft a outfit62-l fountain pen outfit62-l fountain pen 万年筆 active craft a公式ショップ：outfit62-l 軸直径12mm、全長（保管時）129mm、筆記時キャップなし118mm、キャップ装着時148mm 追加調査。outfit62は軸直径12mmの派生シリーズ">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Craft A</div>
+        <div class="model">OutFit62-L Fountain Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">129mm / 径12mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Craft%20A%20OutFit62-L%20Fountain%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://crafta840129.thebase.in/categories/6356847" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Craft%20A%20OutFit62-L%20Fountain%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Craft%20A%20OutFit62-L%20Fountain%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。OutFit62は軸直径12mmの派生シリーズ</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="compact" data-image="no" data-search="craft a outfit62-s fountain pen outfit62-s fountain pen 万年筆 active craft a公式ショップ：outfit62-s 軸直径12mm、全長（保管時）107mm、筆記時キャップなし96mm、キャップ装着時127mm 追加調査。outfit62のショートモデル。キャップ装着筆記時も127mmで130mm以下">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Craft A</div>
+        <div class="model">OutFit62-S Fountain Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">107mm / 径12mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Craft%20A%20OutFit62-S%20Fountain%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://crafta840129.thebase.in/categories/6356847" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Craft%20A%20OutFit62-S%20Fountain%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Craft%20A%20OutFit62-S%20Fountain%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。OutFit62のショートモデル。キャップ装着筆記時も127mmで130mm以下</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="シャープペン" data-fit="comfortable" data-image="no" data-search="craft design technology mechanical pencil 038w (cdt kerry) mechanical pencil 038w (cdt kerry) シャープペン active 販売店複数：h125×w15mm、軸径11.8mm、0.5mm芯。pentel kerryをcdtが再デザイン 追加調査。cdt/クラフトデザインテクノロジーの038w。ケリー系だが独立して検索されるため別行">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Craft Design Technology</div>
+        <div class="model">Mechanical Pencil 038W (CDT Kerry)</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">125mm / 径11.8mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Craft%20Design%20Technology%20Mechanical%20Pencil%20038W%20(CDT%20Kerry)" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://wpb.co.jp/products/cdt-038w-kelly-%E3%82%B1%E3%83%AA%E3%83%BC" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Craft%20Design%20Technology%20Mechanical%20Pencil%20038W%20(CDT%20Kerry)" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Craft%20Design%20Technology%20Mechanical%20Pencil%20038W%20(CDT%20Kerry)/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。CDT/クラフトデザインテクノロジーの038W。ケリー系だが独立して検索されるため別行</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="filofax barley ballpen barley ballpen ボールペン active filofax公式：height 107mm、width 9mm 追加調査。システム手帳向けの短軸ボールペン。公式では現在out of stock表示">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Filofax</div>
+        <div class="model">Barley Ballpen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">107mm / 径9mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Filofax%20Barley%20Ballpen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://filofax.com/products/barley-ballpen-filofax" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Filofax%20Barley%20Ballpen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Filofax%20Barley%20Ballpen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。システム手帳向けの短軸ボールペン。公式では現在out of stock表示</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="comfortable" data-image="no" data-search="fisher backpacker space pen backpacker space pen ボールペン active fisher space pen canada：length closed 111mm、length open 143mm、diameter 10.2mm 追加調査。キーリング付きの携帯向けspace pen">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Fisher</div>
+        <div class="model">Backpacker Space Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">111mm / 径10.2mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Fisher%20Backpacker%20Space%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://spacepen.ca/products/black-backpacker.html" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Fisher%20Backpacker%20Space%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Fisher%20Backpacker%20Space%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。キーリング付きの携帯向けSpace Pen</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="fisher bullet space pen bullet space pen ボールペン active 複数ソース一致 ユーザー確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Fisher</div>
+        <div class="model">Bullet Space Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">96.5mm / 径9.5mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Fisher%20Bullet%20Space%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Fisher%20Bullet%20Space%20Pen" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Fisher%20Bullet%20Space%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Fisher%20Bullet%20Space%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="fisher stowaway space pen stowaway space pen ボールペン active fisher space pen canada：length closed 98mm、length open 127mm、diameter 6.5mm 追加調査。fisher最軽量クラスの短軸space pen">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Fisher</div>
+        <div class="model">Stowaway Space Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">98mm / 径6.5mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Fisher%20Stowaway%20Space%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://spacepen.ca/products/black-stowaway.html" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Fisher%20Stowaway%20Space%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Fisher%20Stowaway%20Space%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。Fisher最軽量クラスの短軸Space Pen</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="fisher trekker space pen trekker space pen ボールペン active 販売店/公式系情報で閉じた状態約98mm、直径約9.4mm 追加調査。キーリング/カラビナ付き携帯向けspace pen">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Fisher</div>
+        <div class="model">Trekker Space Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">98mm / 径9.4mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Fisher%20Trekker%20Space%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Fisher%20Trekker%20Space%20Pen" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Fisher%20Trekker%20Space%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Fisher%20Trekker%20Space%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。キーリング/カラビナ付き携帯向けSpace Pen</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="kaweco al sport ballpoint al sport ballpoint ボールペン active iguana sell ユーザー確認。classic sportと同サイズ帯">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Kaweco</div>
+        <div class="model">AL Sport Ballpoint</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">104mm / 径13mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Kaweco%20AL%20Sport%20Ballpoint" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20AL%20Sport%20Ballpoint" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20AL%20Sport%20Ballpoint" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Kaweco%20AL%20Sport%20Ballpoint/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。Classic Sportと同サイズ帯</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="compact" data-image="no" data-search="kaweco art sport fountain pen art sport fountain pen 万年筆 active kaweco公式art sportシリーズページ。sport系の収納時10.5cm、art sportはfountain penのみ展開 追加調査。アートスポーツ。標準展開化されたアクリルsport系モデル">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Kaweco</div>
+        <div class="model">ART Sport Fountain Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">105mm / 径13mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Kaweco%20ART%20Sport%20Fountain%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.kaweco-pen.com/en/series/art-sport/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20ART%20Sport%20Fountain%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Kaweco%20ART%20Sport%20Fountain%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。アートスポーツ。標準展開化されたアクリルSport系モデル</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="kaweco brass sport ballpoint brass sport ballpoint ボールペン active sport系同サイズ ユーザー確認。classic sportの真鍮版">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Kaweco</div>
+        <div class="model">Brass Sport Ballpoint</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">105mm / 径13mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Kaweco%20Brass%20Sport%20Ballpoint" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20Brass%20Sport%20Ballpoint" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20Brass%20Sport%20Ballpoint" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Kaweco%20Brass%20Sport%20Ballpoint/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。Classic Sportの真鍮版</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="compact" data-image="no" data-search="kaweco classic sport classic sport 万年筆 active 複数ソース一致 ユーザー確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Kaweco</div>
+        <div class="model">Classic Sport</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">105mm / 径12.7mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Kaweco%20Classic%20Sport" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20Classic%20Sport" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20Classic%20Sport" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Kaweco%20Classic%20Sport/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="シャープペン" data-fit="compact" data-image="no" data-search="kaweco classic sport mechanical pencil classic sport シャープペン active kaweco公式シリーズページにmechanical pencilあり。sport系は10.5cm シャープペン追加候補。0.7mm">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Kaweco</div>
+        <div class="model">Classic Sport Mechanical Pencil</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">105mm / 径13mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Kaweco%20Classic%20Sport%20Mechanical%20Pencil" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.kaweco-pen.com/en/series/classic-sport/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20Classic%20Sport%20Mechanical%20Pencil" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Kaweco%20Classic%20Sport%20Mechanical%20Pencil/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">シャープペン追加候補。0.7mm</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="compact" data-image="no" data-search="kaweco liliput liliput 万年筆 active キャップ時97mm、開いた状態87mm、ポスト時125mm。複数ソースで一致 ユーザー確認。複数ソース一致">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Kaweco</div>
+        <div class="model">Liliput</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">97mm / 径9.1mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Kaweco%20Liliput" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20Liliput" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20Liliput" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Kaweco%20Liliput/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。複数ソース一致</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="kaweco liliput ballpoint liliput ballpoint ボールペン active closed length 9.7cm / opened length 12.6cm 公式シリーズページで確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Kaweco</div>
+        <div class="model">Liliput Ballpoint</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">97mm / 径不明</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Kaweco%20Liliput%20Ballpoint" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.kaweco-pen.com/en/Series/LILIPUT/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20Liliput%20Ballpoint" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Kaweco%20Liliput%20Ballpoint/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">公式シリーズページで確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="tight" data-image="no" data-search="kaweco original fountain pen original fountain pen 万年筆 active kaweco公式：original 060/250 fountain pen length 12.6cm、diameter without clip 13.5mm 追加調査。original 060/250は同寸法。収納時130mm以下">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Kaweco</div>
+        <div class="model">Original Fountain Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">126mm / 径13.5mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Kaweco%20Original%20Fountain%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.kaweco-pen.com/en/pens/fountain-pens/880/kaweco-original-fountain-pen-060-black-chrome" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20Original%20Fountain%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Kaweco%20Original%20Fountain%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。Original 060/250は同寸法。収納時130mm以下</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="シャープペン" data-fit="compact" data-image="no" data-search="kaweco special mini mechanical pencil special mini mechanical pencil シャープペン active kaweco公式special s push pencil。販売店・検索結果で105mm/直径10mm一致 シャープペン追加候補。0.5/0.7/0.9/2.0mm展開">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Kaweco</div>
+        <div class="model">Special Mini Mechanical Pencil</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">105mm / 径10mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Kaweco%20Special%20Mini%20Mechanical%20Pencil" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.kaweco-pen.com/en/series/special/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20Special%20Mini%20Mechanical%20Pencil" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Kaweco%20Special%20Mini%20Mechanical%20Pencil/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">シャープペン追加候補。0.5/0.7/0.9/2.0mm展開</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="kaweco sport ballpoint sport ballpoint ボールペン active sport series closed length 10.5cm 公式シリーズページでsport系の収納時長さを確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Kaweco</div>
+        <div class="model">Sport Ballpoint</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">105mm / 径不明</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Kaweco%20Sport%20Ballpoint" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.kaweco-pen.com/en/series/classic-sport/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20Sport%20Ballpoint" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Kaweco%20Sport%20Ballpoint/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">公式シリーズページでSport系の収納時長さを確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="compact" data-image="no" data-search="kaweco supra supra 万年筆 active 短軸99mm、ロング構成130mm ユーザー確認。モジュラー設計のため構成により長さが変わる">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Kaweco</div>
+        <div class="model">Supra</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">99mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Kaweco%20Supra" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20Supra" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20Supra" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Kaweco%20Supra/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。モジュラー設計のため構成により長さが変わる</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="comfortable" data-image="no" data-search="lamy pico pico ボールペン active size 12 x 12 x 124 mm 公式グローバル商品ページ。収納時92mmは公式検索では未確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">LAMY</div>
+        <div class="model">pico</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">124mm / 径12mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=LAMY%20pico" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.lamy.com/en-us/p/lamy-pico-ballpoint-pen" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=LAMY%20pico" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/LAMY%20pico/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">公式グローバル商品ページ。収納時92mmは公式検索では未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="tight" data-image="no" data-search="leuchtturm1917 drehgriffel nr. 1 drehgriffel nr. 1 ボールペン active leuchtturm1917公式：length 13cm。販売店/レビューで直径約9mm 追加調査。ロイヒトトゥルム1917 ドレグリフル。基準上限の130mm">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">LEUCHTTURM1917</div>
+        <div class="model">Drehgriffel Nr. 1</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">130mm / 径9mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=LEUCHTTURM1917%20Drehgriffel%20Nr.%201" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://leuchtturm1917.co.uk/drehgriffel-nr-1.html" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=LEUCHTTURM1917%20Drehgriffel%20Nr.%201" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/LEUCHTTURM1917%20Drehgriffel%20Nr.%201/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。ロイヒトトゥルム1917 ドレグリフル。基準上限の130mm</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="シャープペン" data-fit="tight" data-image="no" data-search="leuchtturm1917 drehgriffel nr. 2 pencil drehgriffel nr. 2 pencil シャープペン active leuchtturm1917公式：length 13cm、0.7mm graphite lead 追加調査。ドレグリフルのメカニカルペンシル版。基準上限の130mm">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">LEUCHTTURM1917</div>
+        <div class="model">Drehgriffel Nr. 2 Pencil</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">130mm / 径9mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=LEUCHTTURM1917%20Drehgriffel%20Nr.%202%20Pencil" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.leuchtturm1917.com/drehgriffel-nr-2-pencil.html" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=LEUCHTTURM1917%20Drehgriffel%20Nr.%202%20Pencil" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/LEUCHTTURM1917%20Drehgriffel%20Nr.%202%20Pencil/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。ドレグリフルのメカニカルペンシル版。基準上限の130mm</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="lihit lab pn-200 mini ballpoint pen pn-200 mini ballpoint pen ボールペン active リヒトラブ公式：pen size approx. 11mm(diameter) x 90mm (length) 追加調査。喫茶プニラボ ミニボールペン。キャップ込み本体寸法はh100mm">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">LIHIT LAB</div>
+        <div class="model">PN-200 Mini Ballpoint Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">90mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=LIHIT%20LAB%20PN-200%20Mini%20Ballpoint%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.eng.lihit-lab.com/pn-200/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=LIHIT%20LAB%20PN-200%20Mini%20Ballpoint%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/LIHIT%20LAB%20PN-200%20Mini%20Ballpoint%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。喫茶プニラボ ミニボールペン。キャップ込み本体寸法はH100mm</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="comfortable" data-image="no" data-search="machine era field pen field pen ボールペン active 公式：0.375in x 4.9in 追加調査。twistはfield pen clickと同一ボディ。clickは公式でdiscontinued表記あり">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Machine Era</div>
+        <div class="model">Field Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">124.5mm / 径9.5mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Machine%20Era%20Field%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.machine-era.com/products/field-pen-twist-2023" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Machine%20Era%20Field%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Machine%20Era%20Field%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。TwistはField Pen Clickと同一ボディ。Clickは公式でdiscontinued表記あり</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="シャープペン" data-fit="tight" data-image="no" data-search="milan capsule slim mechanical pencil 0.5mm capsule slim mechanical pencil 0.5mm シャープペン active milan公式：dimensions 13 x 1.4 x 1.2 cm 追加調査。長さは基準上限の130mm。直径欄は最大幅相当">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">MILAN</div>
+        <div class="model">CAPSULE Slim Mechanical Pencil 0.5mm</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">130mm / 径14mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=MILAN%20CAPSULE%20Slim%20Mechanical%20Pencil%200.5mm" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.milan.es/en/display-box-20-capsule-slim-silver-mechanical-pencils-05-mm" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=MILAN%20CAPSULE%20Slim%20Mechanical%20Pencil%200.5mm" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/MILAN%20CAPSULE%20Slim%20Mechanical%20Pencil%200.5mm/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。長さは基準上限の130mm。直径欄は最大幅相当</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="シャープペン" data-fit="tight" data-image="no" data-search="milan compact sunset mechanical pencil 0.7mm compact sunset mechanical pencil 0.7mm シャープペン active milan公式：size of mechanical pencil 13 x 1.8 x 1.6 cm 追加調査。長さは基準上限の130mm。太めの消しゴム一体型">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">MILAN</div>
+        <div class="model">COMPACT Sunset Mechanical Pencil 0.7mm</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">130mm / 径18mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=MILAN%20COMPACT%20Sunset%20Mechanical%20Pencil%200.7mm" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.milan.es/en/display-box-20-compact-sunset-mechanical-pencils-07-mm" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=MILAN%20COMPACT%20Sunset%20Mechanical%20Pencil%200.7mm" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/MILAN%20COMPACT%20Sunset%20Mechanical%20Pencil%200.7mm/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。長さは基準上限の130mm。太めの消しゴム一体型</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="milan mini p1 touch mini p1 touch ボールペン active milan公式：measurements 10.2 x 1.7 cm, diameter 1cm, 1mm tip 追加調査。短軸のノック式ボールペン">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">MILAN</div>
+        <div class="model">Mini P1 Touch</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">102mm / 径10mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=MILAN%20Mini%20P1%20Touch" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.milan.es/en/can-40-black-p1-touch-mini-pens" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=MILAN%20Mini%20P1%20Touch" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/MILAN%20Mini%20P1%20Touch/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。短軸のノック式ボールペン</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="montblanc meisterstück mozart ballpoint meisterstück mozart ballpoint ボールペン active yahoo! shopping ユーザー確認。高級品枠">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Montblanc</div>
+        <div class="model">Meisterstück Mozart Ballpoint</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">105.8mm / 径10.4mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Montblanc%20Meisterst%C3%BCck%20Mozart%20Ballpoint" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Montblanc%20Meisterst%C3%BCck%20Mozart%20Ballpoint" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Montblanc%20Meisterst%C3%BCck%20Mozart%20Ballpoint" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Montblanc%20Meisterst%C3%BCck%20Mozart%20Ballpoint/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。高級品枠</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="comfortable" data-image="no" data-search="montblanc meisterstück mozart fountain pen meisterstück mozart fountain pen 万年筆 active note ユーザー確認。高級品枠">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Montblanc</div>
+        <div class="model">Meisterstück Mozart Fountain Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">113mm / 径11.7mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Montblanc%20Meisterst%C3%BCck%20Mozart%20Fountain%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Montblanc%20Meisterst%C3%BCck%20Mozart%20Fountain%20Pen" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Montblanc%20Meisterst%C3%BCck%20Mozart%20Fountain%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Montblanc%20Meisterst%C3%BCck%20Mozart%20Fountain%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。高級品枠</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="シャープペン" data-fit="compact" data-image="no" data-search="muji compact mechanical pencil 0.5mm compact mechanical pencil 0.5mm シャープペン active muji公式：length 4.3in (11cm), lead diameter 0.5mm シャープペン追加候補。a7ノート向けコンパクトモデル">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">MUJI</div>
+        <div class="model">Compact Mechanical Pencil 0.5mm</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">110mm / 径不明</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=MUJI%20Compact%20Mechanical%20Pencil%200.5mm" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.muji.us/products/compact-mechanical-pencil-0-5mm-24aw" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=MUJI%20Compact%20Mechanical%20Pencil%200.5mm" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/MUJI%20Compact%20Mechanical%20Pencil%200.5mm/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">シャープペン追加候補。A7ノート向けコンパクトモデル</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="ohto petit-b petit-b ボールペン active jetpens公式 ユーザー確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">OHTO</div>
+        <div class="model">Petit-B</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">79mm / 径6mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=OHTO%20Petit-B" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=OHTO%20Petit-B" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=OHTO%20Petit-B" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/OHTO%20Petit-B/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="ohto rook rook ボールペン active jetpens複数ページで一致 ユーザー確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">OHTO</div>
+        <div class="model">Rook</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">103mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=OHTO%20Rook" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=OHTO%20Rook" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=OHTO%20Rook" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/OHTO%20Rook/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="シャープペン" data-fit="compact" data-image="no" data-search="ohto sharp mini aps-350es sharp mini aps-350es シャープペン active 販売店で105mm・直径5mm シャープペン追加候補。木軸風の短軸モデル">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">OHTO</div>
+        <div class="model">Sharp Mini APS-350ES</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">105mm / 径5mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=OHTO%20Sharp%20Mini%20APS-350ES" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=OHTO%20Sharp%20Mini%20APS-350ES" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=OHTO%20Sharp%20Mini%20APS-350ES" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/OHTO%20Sharp%20Mini%20APS-350ES/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">シャープペン追加候補。木軸風の短軸モデル</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="compact" data-image="no" data-search="ohto tasche tasche 万年筆 active pen chalet ユーザー確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">OHTO</div>
+        <div class="model">Tasche</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">99mm / 径9.7mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=OHTO%20Tasche" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=OHTO%20Tasche" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=OHTO%20Tasche" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/OHTO%20Tasche/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="ohto tl01-b5 tl01-b5 ボールペン active length 91mm / shaft diameter 3.7mm (max 5.6mm) ohto公式グローバル商品ページ">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">OHTO</div>
+        <div class="model">TL01-B5</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">91mm / 径3.7mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=OHTO%20TL01-B5" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://ohto.co.jp/global/products/tl/tl01-b5/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=OHTO%20TL01-B5" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/OHTO%20TL01-B5/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">OHTO公式グローバル商品ページ</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="シャープペン" data-fit="compact" data-image="no" data-search="ohto tl01-sp5 tl01-sp5 シャープペン active ohto公式：size 91 x 3.3mm(max 5.2mm) シャープペン追加候補。minimo系の公式現行シャープペン">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">OHTO</div>
+        <div class="model">TL01-SP5</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">91mm / 径3.3mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=OHTO%20TL01-SP5" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://ohto.co.jp/global/products/tl/tl01-sp5/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=OHTO%20TL01-SP5" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/OHTO%20TL01-SP5/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">シャープペン追加候補。Minimo系の公式現行シャープペン</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="tight" data-image="no" data-search="parker jotter jotter ボールペン active 複数ソース一致 ユーザー確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Parker</div>
+        <div class="model">Jotter</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">128mm / 径8.5mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Parker%20Jotter" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Parker%20Jotter" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Parker%20Jotter" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Parker%20Jotter/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="シャープペン" data-fit="compact" data-image="no" data-search="penco bullet mechanical pencil bullet mechanical pencil シャープペン active 販売店で収納時約10cm、0.5mm芯 シャープペン追加候補。キャップをポストして使う短軸モデル">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Penco</div>
+        <div class="model">Bullet Mechanical Pencil</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">100mm / 径不明</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Penco%20Bullet%20Mechanical%20Pencil" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Penco%20Bullet%20Mechanical%20Pencil" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Penco%20Bullet%20Mechanical%20Pencil" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Penco%20Bullet%20Mechanical%20Pencil/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">シャープペン追加候補。キャップをポストして使う短軸モデル</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="penco perfection bullet perfection bullet ボールペン active hightide公式：penco バレットボールペン。本体 直径1.3×高さ9.3cm、携帯時9.3cm ユーザー確認。hightide/penco公式名はバレットボールペン。既存のperfection bullet候補を公式根拠で補強">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Penco</div>
+        <div class="model">Perfection Bullet</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">93mm / 径13mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Penco%20Perfection%20Bullet" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.hightide.co.jp/c/category/stationery/writing/ballpoint/item-ft180" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Penco%20Perfection%20Bullet" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Penco%20Perfection%20Bullet/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。HIGHTIDE/Penco公式名はバレットボールペン。既存のPerfection Bullet候補を公式根拠で補強</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="tight" data-image="no" data-search="platinum bgmq-100 bgmq-100 ボールペン active プラチナ万年筆公式サイト/ttpen ユーザー確認。グラマーミニ">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Platinum</div>
+        <div class="model">BGMQ-100</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">130mm / 径13.3mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Platinum%20BGMQ-100" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Platinum%20BGMQ-100" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Platinum%20BGMQ-100" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Platinum%20BGMQ-100/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。グラマーミニ</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="retro1951 tornado elite tornado elite ボールペン active retro51公式：pen length 3.5in / 90mm、pen diameter 0.325in / 8.2mm 追加調査。tornado eliteの通常ミニボールペン">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">RETRO1951</div>
+        <div class="model">Tornado Elite</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">90mm / 径8.2mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=RETRO1951%20Tornado%20Elite" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://retro51.com/products/tornado%E2%84%A2-elite-stealth-black-ballpoint" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=RETRO1951%20Tornado%20Elite" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/RETRO1951%20Tornado%20Elite/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。Tornado Eliteの通常ミニボールペン</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="retro1951 tornado elite eagle tornado elite eagle ボールペン active プリコ公式：サイズ89×10mm、重量21g。ペンハウスも本体サイズ約89mm/最大径約10mm表記 追加調査。日本限定300本のエリート イーグル ボールペン">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">RETRO1951</div>
+        <div class="model">Tornado Elite Eagle</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">89mm / 径10mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=RETRO1951%20Tornado%20Elite%20Eagle" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://preco-corp.co.jp/products/14214/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=RETRO1951%20Tornado%20Elite%20Eagle" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/RETRO1951%20Tornado%20Elite%20Eagle/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。日本限定300本のエリート イーグル ボールペン</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="シャープペン" data-fit="tight" data-image="no" data-search="rhodia script mechanical pencil 0.5 script mechanical pencil 0.5 シャープペン active クオバディス・ジャパン公式：全長128mm、胴軸径9mm、最大幅13mm、重量18g 追加調査。ロディア スクリプト メカニカルペンシル 0.5mm">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Rhodia</div>
+        <div class="model">scRipt Mechanical Pencil 0.5</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">128mm / 径9mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Rhodia%20scRipt%20Mechanical%20Pencil%200.5" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.shop.quovadis.co.jp/SHOP/1489.html" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Rhodia%20scRipt%20Mechanical%20Pencil%200.5" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Rhodia%20scRipt%20Mechanical%20Pencil%200.5/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。ロディア スクリプト メカニカルペンシル 0.5mm</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="compact" data-image="no" data-search="schon dsgn pocket six fountain pen pocket six fountain pen 万年筆 active 公式：3.55in/90.2mm capped、5.2in/132mm posted、直径12.7mm 追加調査。キャップ時は130mm以下、ポスト時は132mm">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Schon DSGN</div>
+        <div class="model">Pocket Six Fountain Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">90.2mm / 径12.7mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Schon%20DSGN%20Pocket%20Six%20Fountain%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.schondsgn.com/products/pocket-six-matching-grip" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Schon%20DSGN%20Pocket%20Six%20Fountain%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Schon%20DSGN%20Pocket%20Six%20Fountain%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。キャップ時は130mm以下、ポスト時は132mm</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="comfortable" data-image="no" data-search="tactile turn bolt action mini bolt action mini ボールペン active 公式/販売店：mini length 4.4in、diameter 0.43in 追加調査。tactile turn miniとして流通">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Tactile Turn</div>
+        <div class="model">Bolt Action Mini</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">111.8mm / 径10.9mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Tactile%20Turn%20Bolt%20Action%20Mini" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.tactileturn.com/products/bolt-action-pen" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Tactile%20Turn%20Bolt%20Action%20Mini" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Tactile%20Turn%20Bolt%20Action%20Mini/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。Tactile Turn Miniとして流通</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="traveler&#39;s company brass ballpoint pen brass ballpoint pen ボールペン active 全長99mm。キャップ時102mm、ポスト時138mmという情報もあり ユーザー確認。サイトにより99〜102mmの範囲">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Traveler&#39;s Company</div>
+        <div class="model">Brass Ballpoint Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">99mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Traveler&#39;s%20Company%20Brass%20Ballpoint%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Traveler&#39;s%20Company%20Brass%20Ballpoint%20Pen" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Traveler&#39;s%20Company%20Brass%20Ballpoint%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Traveler&#39;s%20Company%20Brass%20Ballpoint%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。サイトにより99〜102mmの範囲</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="compact" data-image="no" data-search="traveler&#39;s company brass fountain pen brass fountain pen 万年筆 active 公式：brass fountain pen / 11mm in diameter x h102mm。販売店では収納時97mm表記もあり ユーザー確認。公式現行ページは102mm、販売店では97mm表記あり。収納時は130mm以下">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Traveler&#39;s Company</div>
+        <div class="model">Brass Fountain Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">102mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Traveler&#39;s%20Company%20Brass%20Fountain%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.travelers-company.com/products/brass/fountainpen-2020" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Traveler&#39;s%20Company%20Brass%20Fountain%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Traveler&#39;s%20Company%20Brass%20Fountain%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。公式現行ページは102mm、販売店では97mm表記あり。収納時は130mm以下</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ローラーボール" data-fit="compact" data-image="no" data-search="traveler&#39;s company brass rollerball pen brass rollerball pen ローラーボール active 公式：brass rollerball pen / 11mm in diameter x h102mm 追加調査。traveler&#39;s brass penとして確認。万年筆用カートリッジ対応ローラーボール">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Traveler&#39;s Company</div>
+        <div class="model">Brass Rollerball Pen</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ローラーボール</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">102mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Traveler&#39;s%20Company%20Brass%20Rollerball%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.travelers-company.com/products/brass/rollerballpen-2020" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Traveler&#39;s%20Company%20Brass%20Rollerball%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Traveler&#39;s%20Company%20Brass%20Rollerball%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。Traveler&#39;s Brass Penとして確認。万年筆用カートリッジ対応ローラーボール</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="comfortable" data-image="no" data-search="twsbi mini mini 万年筆 active 複数ソース一致 ユーザー確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">TWSBI</div>
+        <div class="model">Mini</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">118mm / 径13mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=TWSBI%20Mini" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=TWSBI%20Mini" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=TWSBI%20Mini" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/TWSBI%20Mini/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="tight" data-image="no" data-search="サクラクレパス sakura craft_lab 001s sakura craft_lab 001s ボールペン active サクラクレパス公式比較記事：001sは130×10mm 追加調査。001をベースにした一体成形メタルボディ。基準上限の130mm">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">サクラクレパス</div>
+        <div class="model">SAKURA craft_lab 001S</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">130mm / 径10mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%82%B5%E3%82%AF%E3%83%A9%E3%82%AF%E3%83%AC%E3%83%91%E3%82%B9%20SAKURA%20craft_lab%20001S" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.craypas.co.jp/press/feature/009/sa_pre_0370.html" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E3%82%B5%E3%82%AF%E3%83%A9%E3%82%AF%E3%83%AC%E3%83%91%E3%82%B9%20SAKURA%20craft_lab%20001S" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E3%82%B5%E3%82%AF%E3%83%A9%E3%82%AF%E3%83%AC%E3%83%91%E3%82%B9%20SAKURA%20craft_lab%20001S/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。001をベースにした一体成形メタルボディ。基準上限の130mm</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="サクラクレパス sakura craft_lab 003 sakura craft_lab 003 ボールペン active サクラクレパス公式比較記事：003は13×13×110mm 追加調査。短寸・太軸のオール金属モデル">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">サクラクレパス</div>
+        <div class="model">SAKURA craft_lab 003</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">110mm / 径13mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%82%B5%E3%82%AF%E3%83%A9%E3%82%AF%E3%83%AC%E3%83%91%E3%82%B9%20SAKURA%20craft_lab%20003" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.craypas.co.jp/press/feature/009/sa_pre_0370.html" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E3%82%B5%E3%82%AF%E3%83%A9%E3%82%AF%E3%83%AC%E3%83%91%E3%82%B9%20SAKURA%20craft_lab%20003" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E3%82%B5%E3%82%AF%E3%83%A9%E3%82%AF%E3%83%AC%E3%83%91%E3%82%B9%20SAKURA%20craft_lab%20003/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。短寸・太軸のオール金属モデル</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="tight" data-image="no" data-search="サクラクレパス sakura craft_lab 010 sakura craft_lab 010 ボールペン active サクラクレパス公式比較記事：010は130×11mm 追加調査。ハンマートーン塗装の真鍮モデル。基準上限の130mm">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">サクラクレパス</div>
+        <div class="model">SAKURA craft_lab 010</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">130mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%82%B5%E3%82%AF%E3%83%A9%E3%82%AF%E3%83%AC%E3%83%91%E3%82%B9%20SAKURA%20craft_lab%20010" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.craypas.co.jp/press/feature/009/sa_pre_0370.html" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E3%82%B5%E3%82%AF%E3%83%A9%E3%82%AF%E3%83%AC%E3%83%91%E3%82%B9%20SAKURA%20craft_lab%20010" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E3%82%B5%E3%82%AF%E3%83%A9%E3%82%AF%E3%83%AC%E3%83%91%E3%82%B9%20SAKURA%20craft_lab%20010/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。ハンマートーン塗装の真鍮モデル。基準上限の130mm</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="compact" data-image="no" data-search="セーラー プロフェッショナルギア スリムミニ プロフェッショナルギア スリムミニ 万年筆 active 本体サイズ：φ17×109.5mm（クリップ部含む）/ 筆記時132mm セーラー公式商品ページ。収納時は130mm以下、筆記時は132mm">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">セーラー</div>
+        <div class="model">プロフェッショナルギア スリムミニ</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">109.5mm / 径17mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%82%BB%E3%83%BC%E3%83%A9%E3%83%BC%20%E3%83%97%E3%83%AD%E3%83%95%E3%82%A7%E3%83%83%E3%82%B7%E3%83%A7%E3%83%8A%E3%83%AB%E3%82%AE%E3%82%A2%20%E3%82%B9%E3%83%AA%E3%83%A0%E3%83%9F%E3%83%8B" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://sailor.co.jp/product/11-1503/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E3%82%BB%E3%83%BC%E3%83%A9%E3%83%BC%20%E3%83%97%E3%83%AD%E3%83%95%E3%82%A7%E3%83%83%E3%82%B7%E3%83%A7%E3%83%8A%E3%83%AB%E3%82%AE%E3%82%A2%20%E3%82%B9%E3%83%AA%E3%83%A0%E3%83%9F%E3%83%8B" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E3%82%BB%E3%83%BC%E3%83%A9%E3%83%BC%20%E3%83%97%E3%83%AD%E3%83%95%E3%82%A7%E3%83%83%E3%82%B7%E3%83%A7%E3%83%8A%E3%83%AB%E3%82%AE%E3%82%A2%20%E3%82%B9%E3%83%AA%E3%83%A0%E3%83%9F%E3%83%8B/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">セーラー公式商品ページ。収納時は130mm以下、筆記時は132mm</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="ゼブラ f-301 compact f-301 compact ボールペン active ttpen ユーザー確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">ゼブラ</div>
+        <div class="model">F-301 Compact</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">98mm / 径9.7mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%82%BC%E3%83%96%E3%83%A9%20F-301%20Compact" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Zebra%20F-301%20Compact" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Zebra%20F-301%20Compact" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Zebra%20F-301%20Compact/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="シャープペン" data-fit="compact" data-image="no" data-search="ゼブラ ts-3 ts-3 シャープペン active jetpens/販売店で100mm・直径約6mm シャープペン追加候補。手帳用t-3のシャープ版に近い短軸モデル">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">ゼブラ</div>
+        <div class="model">TS-3</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">100mm / 径6mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%82%BC%E3%83%96%E3%83%A9%20TS-3" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.jetpens.com/Zebra-Techo-TS-3-Mini-Mechanical-Pencil-0.5-mm/pd/576" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Zebra%20TS-3" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Zebra%20TS-3/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">シャープペン追加候補。手帳用T-3のシャープ版に近い短軸モデル</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="ゼブラ 手帳用 t-3 手帳用 t-3 ボールペン active 最大径φ5.6×全長100.0mm ゼブラ公式商品ページ">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">ゼブラ</div>
+        <div class="model">手帳用 T-3</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">100mm / 径5.6mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%82%BC%E3%83%96%E3%83%A9%20%E6%89%8B%E5%B8%B3%E7%94%A8%20T-3" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.zebra.co.jp/pro/detail/t/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E3%82%BC%E3%83%96%E3%83%A9%20%E6%89%8B%E5%B8%B3%E7%94%A8%20T-3" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E3%82%BC%E3%83%96%E3%83%A9%20%E6%89%8B%E5%B8%B3%E7%94%A8%20T-3/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ゼブラ公式商品ページ</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="yes" data-search="ゼブラ 手帳用 油性ボールペン 0.7mm 手帳用 油性ボールペン 0.7mm ボールペン active スリムでかさばらない　全長わずか10cm 楽天商品ページに全長根拠あり">
+      <div class="image">
+        <img src="https://shop.r10s.jp/bungu-s/cabinet/hikki01/01668143/imgrc0137959041.jpg" alt="ゼブラ 手帳用 油性ボールペン 0.7mm" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">ゼブラ</div>
+        <div class="model">手帳用 油性ボールペン 0.7mm</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">100mm / 径不明</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%82%BC%E3%83%96%E3%83%A9%20%E6%89%8B%E5%B8%B3%E7%94%A8%20%E6%B2%B9%E6%80%A7%E3%83%9C%E3%83%BC%E3%83%AB%E3%83%9A%E3%83%B3%200.7mm" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://item.rakuten.co.jp/bungu-s/10031025" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E3%82%BC%E3%83%96%E3%83%A9%20%E6%89%8B%E5%B8%B3%E7%94%A8%20%E6%B2%B9%E6%80%A7%E3%83%9C%E3%83%BC%E3%83%AB%E3%83%9A%E3%83%B3%200.7mm" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://item.rakuten.co.jp/bungu-s/10031025" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">楽天商品ページに全長根拠あり</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="comfortable" data-image="no" data-search="トンボ鉛筆 エアプレス bc-ap エアプレス bc-ap ボールペン active 全長122ミリ。事務用ボールペンより約2割短いショートボディ 公式ページでは全長を確認。幅は最大幅21mm表記">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">トンボ鉛筆</div>
+        <div class="model">エアプレス BC-AP</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">122mm / 径不明</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%83%88%E3%83%B3%E3%83%9C%E9%89%9B%E7%AD%86%20%E3%82%A8%E3%82%A2%E3%83%97%E3%83%AC%E3%82%B9%20BC-AP" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.tombow.com/products/airpress/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E3%83%88%E3%83%B3%E3%83%9C%E9%89%9B%E7%AD%86%20%E3%82%A8%E3%82%A2%E3%83%97%E3%83%AC%E3%82%B9%20BC-AP" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E3%83%88%E3%83%B3%E3%83%9C%E9%89%9B%E7%AD%86%20%E3%82%A8%E3%82%A2%E3%83%97%E3%83%AC%E3%82%B9%20BC-AP/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">公式ページでは全長を確認。幅は最大幅21mm表記</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="シャープペン" data-fit="comfortable" data-image="no" data-search="パイロット birdy hs-40s バーディ hs-40s シャープペン active 複数販売店で111mm・最大径5.6mm シャープペン追加候補。0.5mm">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">パイロット</div>
+        <div class="model">Birdy HS-40S</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">111mm / 径5.6mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%20Birdy%20HS-40S" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Pilot%20Birdy%20HS-40S" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Pilot%20Birdy%20HS-40S" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Pilot%20Birdy%20HS-40S/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">シャープペン追加候補。0.5mm</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="comfortable" data-image="no" data-search="パイロット elite 95s (e95s) elite 95s (e95s) 万年筆 active jetpensほか複数ソース一致 ユーザー確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">パイロット</div>
+        <div class="model">Elite 95s (E95s)</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">117mm / 径12.8mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%20Elite%2095s%20(E95s)" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Pilot%20Elite%2095s%20(E95s)" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Pilot%20Elite%2095s%20(E95s)" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Pilot%20Elite%2095s%20(E95s)/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="compact" data-image="no" data-search="パイロット petit1 petit1 万年筆 active knightswriting ユーザー確認。pilot公式では万年筆ではない旨の注意あり">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">パイロット</div>
+        <div class="model">Petit1</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">103mm / 径13mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%20Petit1" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Pilot%20Petit1" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Pilot%20Petit1" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Pilot%20Petit1/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。PILOT公式では万年筆ではない旨の注意あり</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="comfortable" data-image="no" data-search="パイロット バーディ bs-40s バーディ bs-40s ボールペン active 全長111mm、最大径φ5.6mm pilot公式ウェブカタログ">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">パイロット</div>
+        <div class="model">バーディ BS-40S</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">111mm / 径5.6mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%20%E3%83%90%E3%83%BC%E3%83%87%E3%82%A3%20BS-40S" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://webcatalog.pilot.co.jp/products/DispDetail.do?itemID=t000100000766&amp;volumeName=00004" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%20%E3%83%90%E3%83%BC%E3%83%87%E3%82%A3%20BS-40S" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%20%E3%83%90%E3%83%BC%E3%83%87%E3%82%A3%20BS-40S/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">PILOT公式ウェブカタログ</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="万年筆" data-fit="comfortable" data-image="no" data-search="パイロット プレラ プレラ 万年筆 active 最大径φ13.4mm、全長120.4mm pilot公式商品ページ">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">パイロット</div>
+        <div class="model">プレラ</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">120.4mm / 径13.4mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%20%E3%83%97%E3%83%AC%E3%83%A9" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://pilot.co.jp/products/pen/fountain/fountain/prera/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%20%E3%83%97%E3%83%AC%E3%83%A9" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%20%E3%83%97%E3%83%AC%E3%83%A9/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">PILOT公式商品ページ</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="シャープペン" data-fit="comfortable" data-image="no" data-search="ぺんてる sharp kerry p1035 sharp kerry p1035 シャープペン active jetpens：length capped 12.4cm、diameter max 11.8mm、grip 9.0mm。国内販売店でも本体寸法125mm表記 追加調査。万年cil《ケリー》。キャップ付きシャープペン">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">ぺんてる</div>
+        <div class="model">Sharp Kerry P1035</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">124mm / 径11.8mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%81%BA%E3%82%93%E3%81%A6%E3%82%8B%20Sharp%20Kerry%20P1035" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.jetpens.com/Pentel-Sharp-Kerry-Mechanical-Pencil-0.5-mm-Red-Body/pd/1311" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Pentel%20Sharp%20Kerry%20P1035" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Pentel%20Sharp%20Kerry%20P1035/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。万年CIL《ケリー》。キャップ付きシャープペン</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="comfortable" data-image="no" data-search="三菱鉛筆 ユニボール zento シグニチャーモデル ユニボール zento シグニチャーモデル ボールペン active 公式商品ページあり。販売店複数でシグニチャーモデルは全長約120〜123.3mm、軸径約13.2mm 追加調査。zento替芯付きone pとは分け、zentoシグニチャーモデルのみ独立候補">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">三菱鉛筆</div>
+        <div class="model">ユニボール ZENTO シグニチャーモデル</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">123.3mm / 径13.2mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E4%B8%89%E8%8F%B1%E9%89%9B%E7%AD%86%20%E3%83%A6%E3%83%8B%E3%83%9C%E3%83%BC%E3%83%AB%20ZENTO%20%E3%82%B7%E3%82%B0%E3%83%8B%E3%83%81%E3%83%A3%E3%83%BC%E3%83%A2%E3%83%87%E3%83%AB" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.mpuni.co.jp/products/ballpoint_pens/roller/zento/ubzh.html" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E4%B8%89%E8%8F%B1%E9%89%9B%E7%AD%86%20%E3%83%A6%E3%83%8B%E3%83%9C%E3%83%BC%E3%83%AB%20ZENTO%20%E3%82%B7%E3%82%B0%E3%83%8B%E3%83%81%E3%83%A3%E3%83%BC%E3%83%A2%E3%83%87%E3%83%AB" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E4%B8%89%E8%8F%B1%E9%89%9B%E7%AD%86%20%E3%83%A6%E3%83%8B%E3%83%9C%E3%83%BC%E3%83%AB%20ZENTO%20%E3%82%B7%E3%82%B0%E3%83%8B%E3%83%81%E3%83%A3%E3%83%BC%E3%83%A2%E3%83%87%E3%83%AB/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。ZENTO替芯付きone Pとは分け、ZENTOシグニチャーモデルのみ独立候補</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="tight" data-image="no" data-search="三菱鉛筆 ユニボール ワン 3 ユニボール ワン 3 ボールペン active uni-ball one 3：全長129mm 公式特設ページでシリーズ比較寸法を確認。3色ボールペン">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">三菱鉛筆</div>
+        <div class="model">ユニボール ワン 3</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">129mm / 径13.9mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E4%B8%89%E8%8F%B1%E9%89%9B%E7%AD%86%20%E3%83%A6%E3%83%8B%E3%83%9C%E3%83%BC%E3%83%AB%20%E3%83%AF%E3%83%B3%203" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.mpuni.co.jp/special/one3/index.html" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E4%B8%89%E8%8F%B1%E9%89%9B%E7%AD%86%20%E3%83%A6%E3%83%8B%E3%83%9C%E3%83%BC%E3%83%AB%20%E3%83%AF%E3%83%B3%203" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E4%B8%89%E8%8F%B1%E9%89%9B%E7%AD%86%20%E3%83%A6%E3%83%8B%E3%83%9C%E3%83%BC%E3%83%AB%20%E3%83%AF%E3%83%B3%203/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">公式特設ページでシリーズ比較寸法を確認。3色ボールペン</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="comfortable" data-image="no" data-search="三菱鉛筆 ユニボール ワン p ユニボール ワン p ボールペン active 軸径13.9×厚さ19.2×全長116.8mm 公式商品ページ/公式リリースで短寸サイズを確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">三菱鉛筆</div>
+        <div class="model">ユニボール ワン P</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">116.8mm / 径13.9mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E4%B8%89%E8%8F%B1%E9%89%9B%E7%AD%86%20%E3%83%A6%E3%83%8B%E3%83%9C%E3%83%BC%E3%83%AB%20%E3%83%AF%E3%83%B3%20P" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.mpuni.co.jp/products/ballpoint_pens/gel/uniball_one/one_P.html" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E4%B8%89%E8%8F%B1%E9%89%9B%E7%AD%86%20%E3%83%A6%E3%83%8B%E3%83%9C%E3%83%BC%E3%83%AB%20%E3%83%AF%E3%83%B3%20P" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E4%B8%89%E8%8F%B1%E9%89%9B%E7%AD%86%20%E3%83%A6%E3%83%8B%E3%83%9C%E3%83%BC%E3%83%AB%20%E3%83%AF%E3%83%B3%20P/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">公式商品ページ/公式リリースで短寸サイズを確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="active" data-type="ボールペン" data-fit="compact" data-image="no" data-search="大西製作所 セルロイド300シリーズbp ミニ セルロイド300シリーズbp ミニ ボールペン active ペンハウス：長さ約110mm、最大胴軸径約11mmφ（クリップを除く）、重さ約13g 追加調査。手帳向けのセルロイド製ミニボールペン。販売ページは品切表示">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">大西製作所</div>
+        <div class="model">セルロイド300シリーズBP ミニ</div>
+        <div class="meta">
+          <span class="pill active">active</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">110mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E5%A4%A7%E8%A5%BF%E8%A3%BD%E4%BD%9C%E6%89%80%20%E3%82%BB%E3%83%AB%E3%83%AD%E3%82%A4%E3%83%89300%E3%82%B7%E3%83%AA%E3%83%BC%E3%82%BABP%20%E3%83%9F%E3%83%8B" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.pen-house.net/item/20838.html" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E5%A4%A7%E8%A5%BF%E8%A3%BD%E4%BD%9C%E6%89%80%20%E3%82%BB%E3%83%AB%E3%83%AD%E3%82%A4%E3%83%89300%E3%82%B7%E3%83%AA%E3%83%BC%E3%82%BABP%20%E3%83%9F%E3%83%8B" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E5%A4%A7%E8%A5%BF%E8%A3%BD%E4%BD%9C%E6%89%80%20%E3%82%BB%E3%83%AB%E3%83%AD%E3%82%A4%E3%83%89300%E3%82%B7%E3%83%AA%E3%83%BC%E3%82%BABP%20%E3%83%9F%E3%83%8B/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。手帳向けのセルロイド製ミニボールペン。販売ページは品切表示</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="over" data-image="no" data-search="caran d&#39;ache ecridor xs ecridor xs ボールペン review 追加候補 ユーザー確認候補。コンパクト版ecridor">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Caran d&#39;Ache</div>
+        <div class="model">Ecridor XS</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-over">サイズ要確認</span>
+          <span class="pill">長さ不明 / 径不明</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Caran%20d&#39;Ache%20Ecridor%20XS" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Caran%20d&#39;Ache%20Ecridor%20XS" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Caran%20d&#39;Ache%20Ecridor%20XS" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Caran%20d&#39;Ache%20Ecridor%20XS/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認候補。コンパクト版Ecridor</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="万年筆" data-fit="compact" data-image="yes" data-search="conklin minigraph minigraph 万年筆 review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61U-z5p-v9L._AC_SL1500_.jpg" alt="Conklin Minigraph" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">Conklin</div>
+        <div class="model">Minigraph</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">100mm / 径12mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Conklin%20Minigraph" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=conklin+minigraph" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=conklin+minigraph" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/conklin+minigraph/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="comfortable" data-image="no" data-search="lamy scribble scribble ボールペン review 推定値。公式寸法未確認 ユーザー確認。廃番・reviewのまま">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">LAMY</div>
+        <div class="model">Scribble</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">120mm / 径13mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=LAMY%20Scribble" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=LAMY%20Scribble" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=LAMY%20Scribble" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/LAMY%20Scribble/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。廃番・reviewのまま</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="シャープペン" data-fit="comfortable" data-image="no" data-search="lamy scribble pencil scribble pencil シャープペン review jetpens：長さ約11.8cm、最大径14.0mm シャープペン追加候補。3.15mm芯。廃番/現行性は要確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">LAMY</div>
+        <div class="model">Scribble Pencil</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">118mm / 径14mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=LAMY%20Scribble%20Pencil" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.jetpens.com/LAMY-Scribble-Drafting-Pencil-3.15-mm-Aluminum-Clip/pd/3044" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=LAMY%20Scribble%20Pencil" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/LAMY%20Scribble%20Pencil/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">シャープペン追加候補。3.15mm芯。廃番/現行性は要確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="tight" data-image="no" data-search="lamy tipo tipo ボールペン review 公式寸法未確認 ユーザー確認。reviewのまま">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">LAMY</div>
+        <div class="model">Tipo</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-tight">少し大きめ</span>
+          <span class="pill">128mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=LAMY%20Tipo" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=LAMY%20Tipo" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=LAMY%20Tipo" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/LAMY%20Tipo/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。reviewのまま</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="comfortable" data-image="yes" data-search="machine era original pen original pen ボールペン review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61R-z0p-v9L._AC_SL1500_.jpg" alt="Machine Era Original Pen" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">Machine Era</div>
+        <div class="model">Original Pen</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">117mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Machine%20Era%20Original%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=machine+era+pen" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=machine+era+pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/machine+era/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="comfortable" data-image="yes" data-search="ohto pieni pieni ボールペン review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61S-r5p-v9L._AC_SL1500_.jpg" alt="OHTO Pieni" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">OHTO</div>
+        <div class="model">Pieni</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">124.5mm / 径7.9mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=OHTO%20Pieni" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=ohto+pieni" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=ohto+pieni" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/ohto+pieni/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="万年筆" data-fit="comfortable" data-image="yes" data-search="opus 88 fantasia fantasia 万年筆 review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61V-z6p-v9L._AC_SL1500_.jpg" alt="Opus 88 Fantasia" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">Opus 88</div>
+        <div class="model">Fantasia</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">115mm / 径14mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Opus%2088%20Fantasia" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=opus+88+fantasia" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=opus+88+fantasia" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/opus+88+fantasia/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="万年筆" data-fit="comfortable" data-image="yes" data-search="opus 88 mini pocket mini pocket 万年筆 review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61V-z6p-v9L._AC_SL1500_.jpg" alt="Opus 88 Mini Pocket" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">Opus 88</div>
+        <div class="model">Mini Pocket</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">118mm / 径15mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Opus%2088%20Mini%20Pocket" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=opus+88+mini" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=opus+88+mini" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/opus+88+mini/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="over" data-image="no" data-search="parker jotter xs jotter xs ボールペン review parker公式ではjotter xsの明確な現行モデルを確認できず。jotter xlは140mmで対象外、mini/minim系は別モデルの可能性 追加調査。モデル名・寸法の確証が弱いためreview">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Parker</div>
+        <div class="model">Jotter XS</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-over">サイズ要確認</span>
+          <span class="pill">長さ不明 / 径不明</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Parker%20Jotter%20XS" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Parker%20Jotter%20XS" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Parker%20Jotter%20XS" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Parker%20Jotter%20XS/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。モデル名・寸法の確証が弱いためreview</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="compact" data-image="yes" data-search="schon dsgn classic machined pen classic machined pen ボールペン review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61P-z8p-v9L._AC_SL1500_.jpg" alt="Schon DSGN Classic Machined Pen" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">Schon DSGN</div>
+        <div class="model">Classic Machined Pen</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">101mm / 径12.7mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Schon%20DSGN%20Classic%20Machined%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=schon+dsgn+pen" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=schon+dsgn+pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/schon+dsgn/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="万年筆" data-fit="compact" data-image="yes" data-search="schon dsgn pocket six pocket six 万年筆 review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61U-z5p-v9L._AC_SL1500_.jpg" alt="Schon DSGN Pocket Six" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">Schon DSGN</div>
+        <div class="model">Pocket Six</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">90mm / 径14mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Schon%20DSGN%20Pocket%20Six" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=schon+dsgn+pocket+six" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=schon+dsgn+pocket+six" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/schon+dsgn/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="comfortable" data-image="yes" data-search="tactile turn mini bolt action mini bolt action ボールペン review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61L-z4p-v9L._AC_SL1500_.jpg" alt="Tactile Turn Mini Bolt Action" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">Tactile Turn</div>
+        <div class="model">Mini Bolt Action</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">112mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Tactile%20Turn%20Mini%20Bolt%20Action" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=tactile+turn+mini" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=tactile+turn+mini" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/tactile+turn/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="comfortable" data-image="yes" data-search="tactile turn mini side click mini side click ボールペン review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61K-z3p-v9L._AC_SL1500_.jpg" alt="Tactile Turn Mini Side Click" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">Tactile Turn</div>
+        <div class="model">Mini Side Click</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">117mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Tactile%20Turn%20Mini%20Side%20Click" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=tactile+turn+mini" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=tactile+turn+mini" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/tactile+turn/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="鉛筆ホルダー" data-fit="compact" data-image="no" data-search="traveler&#39;s company brass pencil brass pencil 鉛筆ホルダー review 公式：brass pencil / 11mm in diameter x h98mm シャープペンではなく鉛筆ホルダー。手帳向け短軸筆記具として別枠候補">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Traveler&#39;s Company</div>
+        <div class="model">Brass Pencil</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">鉛筆ホルダー</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">98mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Traveler&#39;s%20Company%20Brass%20Pencil" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.travelers-company.com/products/brass/pencil-2020" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Traveler&#39;s%20Company%20Brass%20Pencil" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Traveler&#39;s%20Company%20Brass%20Pencil/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">シャープペンではなく鉛筆ホルダー。手帳向け短軸筆記具として別枠候補</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="万年筆" data-fit="comfortable" data-image="yes" data-search="twsbi vac mini vac mini 万年筆 review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61R-z2p-v9L._AC_SL1500_.jpg" alt="TWSBI Vac Mini" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">TWSBI</div>
+        <div class="model">Vac Mini</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">125mm / 径15.1mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=TWSBI%20Vac%20Mini" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=twsbi+vac+mini" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=twsbi+vac+mini" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/twsbi+vac+mini/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="comfortable" data-image="yes" data-search="トンボ鉛筆 on-book on-book ボールペン review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61S-z5p-v9L._AC_SL1500_.jpg" alt="トンボ鉛筆 On-Book" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">トンボ鉛筆</div>
+        <div class="model">On-Book</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">123mm / 径6.5mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%83%88%E3%83%B3%E3%83%9C%E9%89%9B%E7%AD%86%20On-Book" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=tombow+on-book" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=tombow+on-book" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/tombow+on-book/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="comfortable" data-image="yes" data-search="トンボ鉛筆 reporter 4 compact reporter 4 compact ボールペン review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61R-z4p-v9L._AC_SL1500_.jpg" alt="トンボ鉛筆 Reporter 4 Compact" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">トンボ鉛筆</div>
+        <div class="model">Reporter 4 Compact</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">117mm / 径16.4mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%83%88%E3%83%B3%E3%83%9C%E9%89%9B%E7%AD%86%20Reporter%204%20Compact" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=tombow+reporter+4+compact" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=tombow+reporter+4+compact" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/tombow+reporter+4+compact/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="compact" data-image="yes" data-search="パイロット petit2 petit2 ボールペン review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61E-z7p-v9L._AC_SL1500_.jpg" alt="パイロット Petit2" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">パイロット</div>
+        <div class="model">Petit2</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">108mm / 径13.4mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%20Petit2" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=pilot+petit2" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=pilot+petit2" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/pilot+petit2/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="compact" data-image="yes" data-search="パイロット petit3 petit3 ボールペン review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61F-z8p-v9L._AC_SL1500_.jpg" alt="パイロット Petit3" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">パイロット</div>
+        <div class="model">Petit3</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">108mm / 径13.4mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%20Petit3" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=pilot+petit3" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=pilot+petit3" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/pilot+petit3/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="comfortable" data-image="no" data-search="パイロット timeline timeline ボールペン review 追加候補 ユーザー確認候補。m5向けとして人気とのこと">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">パイロット</div>
+        <div class="model">Timeline</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">124mm / 径不明</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%20Timeline" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Pilot%20Timeline" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Pilot%20Timeline" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Pilot%20Timeline/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認候補。M5向けとして人気とのこと</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="" data-fit="compact" data-image="no" data-search="パイロット ペチットワン ペチットワン  review  公式商品ページは確認できるが、検索結果では全長108mmの公式寸法が未確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">パイロット</div>
+        <div class="model">ペチットワン</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">type不明</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">108mm / 径不明</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%20%E3%83%9A%E3%83%81%E3%83%83%E3%83%88%E3%83%AF%E3%83%B3" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://pilot.co.jp/products/pen/color_pen/petit1_n/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%20%E3%83%9A%E3%83%81%E3%83%83%E3%83%88%E3%83%AF%E3%83%B3" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%20%E3%83%9A%E3%83%81%E3%83%83%E3%83%88%E3%83%AF%E3%83%B3/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">公式商品ページは確認できるが、検索結果では全長108mmの公式寸法が未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="comfortable" data-image="yes" data-search="ぺんてる energel 115 energel 115 ボールペン review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61G-z9p-v9L._AC_SL1500_.jpg" alt="ぺんてる EnerGel 115" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">ぺんてる</div>
+        <div class="model">EnerGel 115</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">115mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%81%BA%E3%82%93%E3%81%A6%E3%82%8B%20EnerGel%20115" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=pentel+energel+115" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=pentel+energel+115" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/pentel+energel/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="comfortable" data-image="yes" data-search="ぺんてる vicuna feel (compact version) vicuna feel (compact version) ボールペン review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61C-z1p-v9L._AC_SL1500_.jpg" alt="ぺんてる Vicuna Feel (Compact version)" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">ぺんてる</div>
+        <div class="model">Vicuna Feel (Compact version)</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">125mm / 径10mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%81%BA%E3%82%93%E3%81%A6%E3%82%8B%20Vicuna%20Feel%20(Compact%20version)" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=pentel+vicuna" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=pentel+vicuna" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/pentel+vicuna/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="review" data-type="ボールペン" data-fit="comfortable" data-image="yes" data-search="三菱鉛筆 jetstream stylus jetstream stylus ボールペン review  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61H-z0p-v9L._AC_SL1500_.jpg" alt="三菱鉛筆 Jetstream Stylus" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">三菱鉛筆</div>
+        <div class="model">Jetstream Stylus</div>
+        <div class="meta">
+          <span class="pill review">review</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">125mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E4%B8%89%E8%8F%B1%E9%89%9B%E7%AD%86%20Jetstream%20Stylus" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=jetstream+stylus" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=jetstream+stylus" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/jetstream+stylus/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="discontinued" data-type="ボールペン" data-fit="compact" data-image="yes" data-search="cross ion ion ボールペン discontinued  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61X-z0p-v9L._AC_SL1500_.jpg" alt="Cross Ion" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">Cross</div>
+        <div class="model">Ion</div>
+        <div class="meta">
+          <span class="pill discontinued">discontinued</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">90mm / 径13mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Cross%20Ion" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=cross+ion+pen" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=cross+ion+pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/cross+ion/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="discontinued" data-type="万年筆" data-fit="compact" data-image="yes" data-search="montblanc heritage rouge et noir baby heritage rouge et noir baby 万年筆 discontinued  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61T-z4p-v9L._AC_SL1500_.jpg" alt="Montblanc Heritage Rouge et Noir Baby" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">Montblanc</div>
+        <div class="model">Heritage Rouge et Noir Baby</div>
+        <div class="meta">
+          <span class="pill discontinued">discontinued</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">99mm / 径11.8mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Montblanc%20Heritage%20Rouge%20et%20Noir%20Baby" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=montblanc+heritage+baby" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=montblanc+heritage+baby" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/montblanc+heritage+baby/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="discontinued" data-type="万年筆" data-fit="comfortable" data-image="yes" data-search="montblanc mozart 114 mozart 114 万年筆 discontinued  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61S-z3p-v9L._AC_SL1500_.jpg" alt="Montblanc Mozart 114" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">Montblanc</div>
+        <div class="model">Mozart 114</div>
+        <div class="meta">
+          <span class="pill discontinued">discontinued</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">113mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Montblanc%20Mozart%20114" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=montblanc+mozart+114" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=montblanc+mozart+114" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/montblanc+mozart/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="discontinued" data-type="ボールペン" data-fit="compact" data-image="no" data-search="ohto minimo minimo ボールペン discontinued 複数ソース一致 ユーザー確認。サイズは適合するが公式確認済み行では生産終了品">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">OHTO</div>
+        <div class="model">Minimo</div>
+        <div class="meta">
+          <span class="pill discontinued">discontinued</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">91mm / 径3.7mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=OHTO%20Minimo" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=OHTO%20Minimo" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=OHTO%20Minimo" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/OHTO%20Minimo/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。サイズは適合するが公式確認済み行では生産終了品</div>
+      </div>
+    </article>
+    <article class="card" data-status="discontinued" data-type="ボールペン" data-fit="compact" data-image="no" data-search="ohto minimo nbp-505mn minimo ボールペン discontinued length 91mm / shaft diameter 3.7mm (max 5.2mm) 公式ページで確認。生産終了品">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">OHTO</div>
+        <div class="model">minimo NBP-505MN</div>
+        <div class="meta">
+          <span class="pill discontinued">discontinued</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">91mm / 径3.7mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=OHTO%20minimo%20NBP-505MN" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.ohto.co.jp/english/product/nbp505mn/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=OHTO%20minimo%20NBP-505MN" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/OHTO%20minimo%20NBP-505MN/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">公式ページで確認。生産終了品</div>
+      </div>
+    </article>
+    <article class="card" data-status="discontinued" data-type="万年筆" data-fit="compact" data-image="yes" data-search="pelikan m300 m300 万年筆 discontinued  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61R-z4p-v9L._AC_SL1500_.jpg" alt="Pelikan M300" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">Pelikan</div>
+        <div class="model">M300</div>
+        <div class="meta">
+          <span class="pill discontinued">discontinued</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">110mm / 径11mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Pelikan%20M300" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=pelikan+m300" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=pelikan+m300" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/pelikan+m300/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="discontinued" data-type="ボールペン" data-fit="comfortable" data-image="yes" data-search="platinum pocket (vintage bp) pocket (vintage bp) ボールペン discontinued  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61D-z6p-v9L._AC_SL1500_.jpg" alt="Platinum Pocket (Vintage BP)" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">Platinum</div>
+        <div class="model">Pocket (Vintage BP)</div>
+        <div class="meta">
+          <span class="pill discontinued">discontinued</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">115mm / 径10mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Platinum%20Pocket%20(Vintage%20BP)" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=platinum+pocket+ballpoint" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=platinum+pocket+ballpoint" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/platinum+pocket/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="discontinued" data-type="万年筆" data-fit="comfortable" data-image="yes" data-search="platinum pocket (vintage) pocket (vintage) 万年筆 discontinued  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/61P-z2p-v9L._AC_SL1500_.jpg" alt="Platinum Pocket (Vintage)" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">Platinum</div>
+        <div class="model">Pocket (Vintage)</div>
+        <div class="meta">
+          <span class="pill discontinued">discontinued</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">115mm / 径12mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Platinum%20Pocket%20(Vintage)" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=platinum+pocket+fountain+pen" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=platinum+pocket+fountain+pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/platinum+pocket/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="discontinued" data-type="ボールペン" data-fit="comfortable" data-image="no" data-search="rotring esprit telescoping esprit telescoping ボールペン discontinued yoseka stationery。伸長時137mm ユーザー確認。廃番・テレスコープ式">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Rotring</div>
+        <div class="model">Esprit Telescoping</div>
+        <div class="meta">
+          <span class="pill discontinued">discontinued</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">119mm / 径不明</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Rotring%20Esprit%20Telescoping" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Rotring%20Esprit%20Telescoping" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Rotring%20Esprit%20Telescoping" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Rotring%20Esprit%20Telescoping/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。廃番・テレスコープ式</div>
+      </div>
+    </article>
+    <article class="card" data-status="discontinued" data-type="シャープペン" data-fit="compact" data-image="no" data-search="rotring esprit telescoping pencil esprit telescoping pencil シャープペン discontinued レビュー/販売店で収納時105〜106mm、伸長時124〜125mm シャープペン追加候補。廃番・テレスコープ式">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Rotring</div>
+        <div class="model">Esprit Telescoping Pencil</div>
+        <div class="meta">
+          <span class="pill discontinued">discontinued</span>
+          <span class="pill">シャープペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">106mm / 径10mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Rotring%20Esprit%20Telescoping%20Pencil" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Rotring%20Esprit%20Telescoping%20Pencil" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Rotring%20Esprit%20Telescoping%20Pencil" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Rotring%20Esprit%20Telescoping%20Pencil/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">シャープペン追加候補。廃番・テレスコープ式</div>
+      </div>
+    </article>
+    <article class="card" data-status="discontinued" data-type="万年筆" data-fit="comfortable" data-image="yes" data-search="セーラー chalana シャレーナ 万年筆 discontinued  既存manas候補。公式/販売店根拠は未確認">
+      <div class="image">
+        <img src="https://m.media-amazon.com/images/I/51m-z2o-S9L._AC_SL1500_.jpg" alt="セーラー Chalana" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">セーラー</div>
+        <div class="model">Chalana</div>
+        <div class="meta">
+          <span class="pill discontinued">discontinued</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-comfortable">だいたい収まる</span>
+          <span class="pill">122mm / 径6.5mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%82%BB%E3%83%BC%E3%83%A9%E3%83%BC%20Chalana" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=sailor+chalana" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=sailor+chalana" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/sailor+chalana/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">既存Manas候補。公式/販売店根拠は未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="discontinued" data-type="ボールペン" data-fit="compact" data-image="yes" data-search="ゼブラ ■ 限定 アースカラー sl-f1 mini 油性ボールペン 0.7ｍｍ ペールブルー ba55-ec-pb sl-f1 mini ボールペン discontinued サイズ:全長84mm/107mm（伸長時）最大径φ11.7mm 楽天商品ページに全長根拠あり">
+      <div class="image">
+        <img src="https://shop.r10s.jp/bunzo2017/cabinet/12601871/4901681120741.jpg" alt="ゼブラ ■ 限定 アースカラー SL-F1 mini 油性ボールペン 0.7ｍｍ ペールブルー BA55-EC-PB" loading="lazy">
+      </div>
+      <div class="body">
+        <div class="brand">ゼブラ</div>
+        <div class="model">■ 限定 アースカラー SL-F1 mini 油性ボールペン 0.7ｍｍ ペールブルー BA55-EC-PB</div>
+        <div class="meta">
+          <span class="pill discontinued">discontinued</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">107mm / 径11.7mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%82%BC%E3%83%96%E3%83%A9%20%E2%96%A0%20%E9%99%90%E5%AE%9A%20%E3%82%A2%E3%83%BC%E3%82%B9%E3%82%AB%E3%83%A9%E3%83%BC%20SL-F1%20mini%20%E6%B2%B9%E6%80%A7%E3%83%9C%E3%83%BC%E3%83%AB%E3%83%9A%E3%83%B3%200.7%EF%BD%8D%EF%BD%8D%20%E3%83%9A%E3%83%BC%E3%83%AB%E3%83%96%E3%83%AB%E3%83%BC%20BA55-EC-PB" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://item.rakuten.co.jp/bunzo2017/4901681-120741" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E3%82%BC%E3%83%96%E3%83%A9%20%E2%96%A0%20%E9%99%90%E5%AE%9A%20%E3%82%A2%E3%83%BC%E3%82%B9%E3%82%AB%E3%83%A9%E3%83%BC%20SL-F1%20mini%20%E6%B2%B9%E6%80%A7%E3%83%9C%E3%83%BC%E3%83%AB%E3%83%9A%E3%83%B3%200.7%EF%BD%8D%EF%BD%8D%20%E3%83%9A%E3%83%BC%E3%83%AB%E3%83%96%E3%83%AB%E3%83%BC%20BA55-EC-PB" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://item.rakuten.co.jp/bunzo2017/4901681-120741" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">楽天商品ページに全長根拠あり</div>
+      </div>
+    </article>
+    <article class="card" data-status="discontinued" data-type="" data-fit="compact" data-image="no" data-search="ゼブラ sl-f1 mini ba55 sl-f1 mini  discontinued  公式faqで製造終了は確認できるが、全長107mmの公式仕様ページは未確認">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">ゼブラ</div>
+        <div class="model">SL-F1 mini BA55</div>
+        <div class="meta">
+          <span class="pill discontinued">discontinued</span>
+          <span class="pill">type不明</span>
+          <span class="pill fit-compact">はみ出しにくい</span>
+          <span class="pill">107mm / 径不明</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%82%BC%E3%83%96%E3%83%A9%20SL-F1%20mini%20BA55" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.zebra.co.jp/contact/faq/QA05/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E3%82%BC%E3%83%96%E3%83%A9%20SL-F1%20mini%20BA55" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E3%82%BC%E3%83%96%E3%83%A9%20SL-F1%20mini%20BA55/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">公式FAQで製造終了は確認できるが、全長107mmの公式仕様ページは未確認</div>
+      </div>
+    </article>
+    <article class="card" data-status="exclude" data-type="ボールペン" data-fit="over" data-image="no" data-search="antou pen c pen c ボールペン exclude antou公式：with cap on 144mm、with cap attached behind 146mm、without cap 121mm、width ø12mm 追加調査。通常サイズは収納時130mm超のため除外">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">ANTOU</div>
+        <div class="model">Pen C</div>
+        <div class="meta">
+          <span class="pill exclude">exclude</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-over">はみ出し注意</span>
+          <span class="pill">144mm / 径12mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=ANTOU%20Pen%20C" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://antou1010.com/product/penc/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=ANTOU%20Pen%20C" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/ANTOU%20Pen%20C/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。通常サイズは収納時130mm超のため除外</div>
+      </div>
+    </article>
+    <article class="card" data-status="exclude" data-type="ボールペン" data-fit="over" data-image="no" data-search="fisher cap-o-matic space pen cap-o-matic space pen ボールペン exclude fisher系公式/販売店でclosed 5.13in、diameter .38in 追加調査。約130.3mmで基準をわずかに超えるため除外">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Fisher</div>
+        <div class="model">Cap-O-Matic Space Pen</div>
+        <div class="meta">
+          <span class="pill exclude">exclude</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-over">はみ出し注意</span>
+          <span class="pill">130.3mm / 径9.5mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Fisher%20Cap-O-Matic%20Space%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://spacepen.ca/products/lacquered-brass-cap-o-matic.html" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Fisher%20Cap-O-Matic%20Space%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Fisher%20Cap-O-Matic%20Space%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。約130.3mmで基準をわずかに超えるため除外</div>
+      </div>
+    </article>
+    <article class="card" data-status="exclude" data-type="万年筆" data-fit="over" data-image="no" data-search="kakimori frost fountain pen frost fountain pen 万年筆 exclude kakimori公式仕様：dimensions h134 x ø14mm 追加調査。カキモリ frost。130mmを少し超えるため除外">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Kakimori</div>
+        <div class="model">Frost Fountain Pen</div>
+        <div class="meta">
+          <span class="pill exclude">exclude</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-over">はみ出し注意</span>
+          <span class="pill">134mm / 径14mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Kakimori%20Frost%20Fountain%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://kakimori.com/en/pages/spec-frost" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kakimori%20Frost%20Fountain%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Kakimori%20Frost%20Fountain%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。カキモリ Frost。130mmを少し超えるため除外</div>
+      </div>
+    </article>
+    <article class="card" data-status="exclude" data-type="ローラーボール" data-fit="over" data-image="no" data-search="kakimori frost rollerball frost rollerball ローラーボール exclude kakimori公式仕様：dimensions h134 x ø14mm。万年筆/ローラーボール共通 追加調査。ボトルインク対応ローラーボール。130mmを少し超えるため除外">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Kakimori</div>
+        <div class="model">Frost Rollerball</div>
+        <div class="meta">
+          <span class="pill exclude">exclude</span>
+          <span class="pill">ローラーボール</span>
+          <span class="pill fit-over">はみ出し注意</span>
+          <span class="pill">134mm / 径14mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Kakimori%20Frost%20Rollerball" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://kakimori.com/en/pages/spec-frost" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kakimori%20Frost%20Rollerball" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Kakimori%20Frost%20Rollerball/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。ボトルインク対応ローラーボール。130mmを少し超えるため除外</div>
+      </div>
+    </article>
+    <article class="card" data-status="exclude" data-type="ボールペン" data-fit="over" data-image="no" data-search="kaweco original ballpoint pen original ballpoint pen ボールペン exclude 販売店複数でoriginal ballpointは約132mm、直径約11.5〜12mm 追加調査。130mm超のため除外">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">Kaweco</div>
+        <div class="model">Original Ballpoint Pen</div>
+        <div class="meta">
+          <span class="pill exclude">exclude</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-over">はみ出し注意</span>
+          <span class="pill">132mm / 径12mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=Kaweco%20Original%20Ballpoint%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20Original%20Ballpoint%20Pen" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=Kaweco%20Original%20Ballpoint%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/Kaweco%20Original%20Ballpoint%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。130mm超のため除外</div>
+      </div>
+    </article>
+    <article class="card" data-status="exclude" data-type="万年筆" data-fit="over" data-image="no" data-search="lamy cp1 (compact version) cp1 (compact version) 万年筆 exclude lamy公式・複数ソース一致 ユーザー確認。130mm超のため除外候補">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">LAMY</div>
+        <div class="model">CP1 (Compact version)</div>
+        <div class="meta">
+          <span class="pill exclude">exclude</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-over">はみ出し注意</span>
+          <span class="pill">135mm / 径9.4mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=LAMY%20CP1%20(Compact%20version)" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=LAMY%20CP1%20(Compact%20version)" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=LAMY%20CP1%20(Compact%20version)" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/LAMY%20CP1%20(Compact%20version)/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">ユーザー確認。130mm超のため除外候補</div>
+      </div>
+    </article>
+    <article class="card" data-status="exclude" data-type="ボールペン" data-fit="over" data-image="no" data-search="milan compact ballpoint pen compact ballpoint pen ボールペン exclude 販売店でlength 14.1cm、diameter 1.4cm 追加調査。130mm超のため除外">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">MILAN</div>
+        <div class="model">COMPACT Ballpoint Pen</div>
+        <div class="meta">
+          <span class="pill exclude">exclude</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-over">はみ出し注意</span>
+          <span class="pill">141mm / 径14mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=MILAN%20COMPACT%20Ballpoint%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=MILAN%20COMPACT%20Ballpoint%20Pen" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=MILAN%20COMPACT%20Ballpoint%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/MILAN%20COMPACT%20Ballpoint%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。130mm超のため除外</div>
+      </div>
+    </article>
+    <article class="card" data-status="exclude" data-type="ボールペン" data-fit="over" data-image="no" data-search="ystudio classic revolve portable ballpoint pen classic revolve portable ballpoint pen ボールペン exclude 公式：dimension 9mm x 10mm x 139mm 追加調査。130mm超のため除外">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">ystudio</div>
+        <div class="model">Classic Revolve Portable Ballpoint Pen</div>
+        <div class="meta">
+          <span class="pill exclude">exclude</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-over">はみ出し注意</span>
+          <span class="pill">139mm / 径10mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=ystudio%20Classic%20Revolve%20Portable%20Ballpoint%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="http://ystudiostyle.com/products/brassing-portable-ballpoint-pen-1-1" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=ystudio%20Classic%20Revolve%20Portable%20Ballpoint%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/ystudio%20Classic%20Revolve%20Portable%20Ballpoint%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。130mm超のため除外</div>
+      </div>
+    </article>
+    <article class="card" data-status="exclude" data-type="万年筆" data-fit="over" data-image="no" data-search="ystudio classic revolve portable fountain pen classic revolve portable fountain pen 万年筆 exclude 公式/検索結果：138mm、直径10.5mm 追加調査。130mm超のため除外">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">ystudio</div>
+        <div class="model">Classic Revolve Portable Fountain Pen</div>
+        <div class="meta">
+          <span class="pill exclude">exclude</span>
+          <span class="pill">万年筆</span>
+          <span class="pill fit-over">はみ出し注意</span>
+          <span class="pill">138mm / 径10.5mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=ystudio%20Classic%20Revolve%20Portable%20Fountain%20Pen" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.ystudiostyle.com/products/brassing-portable-fountain-pen" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=ystudio%20Classic%20Revolve%20Portable%20Fountain%20Pen" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/ystudio%20Classic%20Revolve%20Portable%20Fountain%20Pen/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。130mm超のため除外</div>
+      </div>
+    </article>
+    <article class="card" data-status="exclude" data-type="ボールペン" data-fit="over" data-image="no" data-search="サクラクレパス sakura craft_lab 001 sakura craft_lab 001 ボールペン exclude サクラクレパス公式比較記事：001は131×10.5mm 追加調査。人気モデルだが130mmをわずかに超えるため除外">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">サクラクレパス</div>
+        <div class="model">SAKURA craft_lab 001</div>
+        <div class="meta">
+          <span class="pill exclude">exclude</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-over">はみ出し注意</span>
+          <span class="pill">131mm / 径10.5mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E3%82%B5%E3%82%AF%E3%83%A9%E3%82%AF%E3%83%AC%E3%83%91%E3%82%B9%20SAKURA%20craft_lab%20001" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.craypas.co.jp/press/feature/009/sa_pre_0370.html" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E3%82%B5%E3%82%AF%E3%83%A9%E3%82%AF%E3%83%AC%E3%83%91%E3%82%B9%20SAKURA%20craft_lab%20001" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E3%82%B5%E3%82%AF%E3%83%A9%E3%82%AF%E3%83%AC%E3%83%91%E3%82%B9%20SAKURA%20craft_lab%20001/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。人気モデルだが130mmをわずかに超えるため除外</div>
+      </div>
+    </article>
+    <article class="card" data-status="exclude" data-type="ボールペン" data-fit="over" data-image="no" data-search="大西製作所 セルロイド400シリーズbp セルロイド400シリーズbp ボールペン exclude ペンハウス等：長さ約140mm、最大胴軸径約12mmφ 追加調査。通常サイズのセルロイドボールペンは130mm超のため除外">
+      <div class="image">
+        <div class="placeholder">画像URLなし<br>画像検索リンクから確認</div>
+      </div>
+      <div class="body">
+        <div class="brand">大西製作所</div>
+        <div class="model">セルロイド400シリーズBP</div>
+        <div class="meta">
+          <span class="pill exclude">exclude</span>
+          <span class="pill">ボールペン</span>
+          <span class="pill fit-over">はみ出し注意</span>
+          <span class="pill">140mm / 径12mm</span>
+        </div>
+        <div class="links">
+          <a class="link" href="https://www.google.com/search?tbm=isch&amp;q=%E5%A4%A7%E8%A5%BF%E8%A3%BD%E4%BD%9C%E6%89%80%20%E3%82%BB%E3%83%AB%E3%83%AD%E3%82%A4%E3%83%89400%E3%82%B7%E3%83%AA%E3%83%BC%E3%82%BABP" target="_blank" rel="noreferrer">画像検索</a>
+          <a class="link" href="https://www.pen-house.net/category/ONISHI_SEISAKUSHO_15/" target="_blank" rel="noreferrer">根拠/販売元</a>
+          <a class="link" href="https://www.amazon.co.jp/s?k=%E5%A4%A7%E8%A5%BF%E8%A3%BD%E4%BD%9C%E6%89%80%20%E3%82%BB%E3%83%AB%E3%83%AD%E3%82%A4%E3%83%89400%E3%82%B7%E3%83%AA%E3%83%BC%E3%82%BABP" target="_blank" rel="noreferrer">Amazon</a>
+          <a class="link" href="https://search.rakuten.co.jp/search/mall/%E5%A4%A7%E8%A5%BF%E8%A3%BD%E4%BD%9C%E6%89%80%20%E3%82%BB%E3%83%AB%E3%83%AD%E3%82%A4%E3%83%89400%E3%82%B7%E3%83%AA%E3%83%BC%E3%82%BABP/" target="_blank" rel="noreferrer">楽天</a>
+        </div>
+        <div class="note">追加調査。通常サイズのセルロイドボールペンは130mm超のため除外</div>
+      </div>
+    </article>
+  </main>
+  <script>
+    const cards = [...document.querySelectorAll('.card')];
+    const controls = {
+      status: document.querySelector('#statusFilter'),
+      type: document.querySelector('#typeFilter'),
+      fit: document.querySelector('#fitFilter'),
+      image: document.querySelector('#imageFilter'),
+      search: document.querySelector('#searchFilter'),
+      count: document.querySelector('#visibleCount'),
+    };
+
+    function applyFilters() {
+      const query = controls.search.value.trim().toLowerCase();
+      let visible = 0;
+
+      for (const card of cards) {
+        const matchesStatus = !controls.status.value || card.dataset.status === controls.status.value;
+        const matchesType = !controls.type.value || card.dataset.type === controls.type.value;
+        const matchesFit = !controls.fit.value || card.dataset.fit === controls.fit.value;
+        const matchesImage = !controls.image.value || card.dataset.image === controls.image.value;
+        const matchesSearch = !query || card.dataset.search.includes(query);
+        const show = matchesStatus && matchesType && matchesFit && matchesImage && matchesSearch;
+
+        card.hidden = !show;
+        if (show) visible += 1;
+      }
+
+      controls.count.textContent = visible + ' / ' + cards.length + ' 件表示';
+    }
+
+    for (const control of Object.values(controls)) {
+      if (control && control !== controls.count) control.addEventListener('input', applyFilters);
+    }
+
+    applyFilters();
+  </script>
+</body>
+</html>

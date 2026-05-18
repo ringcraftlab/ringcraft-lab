@@ -57,10 +57,10 @@ const TOOL_CARDS = [
   },
   */
   {
+    to: '/goods',
     title: 'おすすめ手帳関連グッズ',
-    desc: 'ペン、手帳、リフィル、万年筆など。',
+    desc: 'M5ペン、手帳、リフィル選びなど。',
     primary: false,
-    comingSoon: true,
     Icon: IcoPen,
   },
 ];

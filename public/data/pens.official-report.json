@@ -1,0 +1,140 @@
+{
+  "accepted": [
+    {
+      "brand": "三菱鉛筆",
+      "model": "ユニボール ワン P",
+      "type": "ボールペン",
+      "length": 116.8,
+      "diameter": 13.9,
+      "officialUrl": "https://www.mpuni.co.jp/products/ballpoint_pens/gel/uniball_one/one_P.html",
+      "evidence": "軸径13.9×厚さ19.2×全長116.8mm",
+      "note": "公式商品ページ/公式リリースで短寸サイズを確認"
+    },
+    {
+      "brand": "三菱鉛筆",
+      "model": "ユニボール ワン 3",
+      "type": "ボールペン",
+      "length": 129,
+      "diameter": 13.9,
+      "officialUrl": "https://www.mpuni.co.jp/special/one3/index.html",
+      "evidence": "uni-ball one 3：全長129mm",
+      "note": "公式特設ページでシリーズ比較寸法を確認。3色ボールペン"
+    },
+    {
+      "brand": "パイロット",
+      "model": "バーディ BS-40S",
+      "type": "ボールペン",
+      "length": 111,
+      "diameter": 5.6,
+      "officialUrl": "https://webcatalog.pilot.co.jp/products/DispDetail.do?itemID=t000100000766&volumeName=00004",
+      "evidence": "全長111mm、最大径φ5.6mm",
+      "note": "PILOT公式ウェブカタログ"
+    },
+    {
+      "brand": "パイロット",
+      "model": "プレラ",
+      "type": "万年筆",
+      "length": 120.4,
+      "diameter": 13.4,
+      "officialUrl": "https://pilot.co.jp/products/pen/fountain/fountain/prera/",
+      "evidence": "最大径φ13.4mm、全長120.4mm",
+      "note": "PILOT公式商品ページ"
+    },
+    {
+      "brand": "セーラー",
+      "model": "プロフェッショナルギア スリムミニ",
+      "type": "万年筆",
+      "length": 109.5,
+      "diameter": 17,
+      "officialUrl": "https://sailor.co.jp/product/11-1503/",
+      "evidence": "本体サイズ：φ17×109.5mm（クリップ部含む）/ 筆記時132mm",
+      "note": "セーラー公式商品ページ。収納時は130mm以下、筆記時は132mm"
+    },
+    {
+      "brand": "ゼブラ",
+      "model": "手帳用 T-3",
+      "type": "ボールペン",
+      "length": 100,
+      "diameter": 5.6,
+      "officialUrl": "https://www.zebra.co.jp/pro/detail/t/",
+      "evidence": "最大径Φ5.6×全長100.0mm",
+      "note": "ゼブラ公式商品ページ"
+    },
+    {
+      "brand": "トンボ鉛筆",
+      "model": "エアプレス BC-AP",
+      "type": "ボールペン",
+      "length": 122,
+      "diameter": null,
+      "officialUrl": "https://www.tombow.com/products/airpress/",
+      "evidence": "全長122ミリ。事務用ボールペンより約2割短いショートボディ",
+      "note": "公式ページでは全長を確認。幅は最大幅21mm表記"
+    },
+    {
+      "brand": "OHTO",
+      "model": "TL01-B5",
+      "type": "ボールペン",
+      "length": 91,
+      "diameter": 3.7,
+      "officialUrl": "https://ohto.co.jp/global/products/tl/tl01-b5/",
+      "evidence": "Length 91mm / Shaft diameter 3.7mm (max 5.6mm)",
+      "note": "OHTO公式グローバル商品ページ"
+    },
+    {
+      "brand": "OHTO",
+      "model": "minimo NBP-505MN",
+      "type": "ボールペン",
+      "length": 91,
+      "diameter": 3.7,
+      "officialUrl": "https://www.ohto.co.jp/english/product/nbp505mn/",
+      "evidence": "Length 91mm / Shaft diameter 3.7mm (max 5.2mm)",
+      "note": "公式ページで確認。生産終了品"
+    },
+    {
+      "brand": "LAMY",
+      "model": "pico",
+      "type": "ボールペン",
+      "length": 124,
+      "diameter": 12,
+      "officialUrl": "https://www.lamy.com/en-us/p/lamy-pico-ballpoint-pen",
+      "evidence": "Size 12 x 12 x 124 mm",
+      "note": "公式グローバル商品ページ。収納時92mmは公式検索では未確認"
+    },
+    {
+      "brand": "Kaweco",
+      "model": "Sport Ballpoint",
+      "type": "ボールペン",
+      "length": 105,
+      "diameter": null,
+      "officialUrl": "https://www.kaweco-pen.com/en/series/classic-sport/",
+      "evidence": "Sport series closed length 10.5cm",
+      "note": "公式シリーズページでSport系の収納時長さを確認"
+    },
+    {
+      "brand": "Kaweco",
+      "model": "Liliput Ballpoint",
+      "type": "ボールペン",
+      "length": 97,
+      "diameter": null,
+      "officialUrl": "https://www.kaweco-pen.com/en/Series/LILIPUT/",
+      "evidence": "Closed length 9.7cm / opened length 12.6cm",
+      "note": "公式シリーズページで確認"
+    }
+  ],
+  "needsReview": [
+    {
+      "brand": "ゼブラ",
+      "model": "SL-F1 mini BA55",
+      "reason": "公式FAQで製造終了は確認できるが、全長107mmの公式仕様ページは未確認",
+      "candidateLength": 107,
+      "officialUrl": "https://www.zebra.co.jp/contact/faq/QA05/"
+    },
+    {
+      "brand": "パイロット",
+      "model": "ペチットワン",
+      "reason": "公式商品ページは確認できるが、検索結果では全長108mmの公式寸法が未確認",
+      "candidateLength": 108,
+      "officialUrl": "https://pilot.co.jp/products/pen/color_pen/petit1_n/"
+    }
+  ]
+}

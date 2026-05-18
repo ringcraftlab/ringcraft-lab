@@ -429,7 +429,7 @@ export default function PenSearch() {
                       <td style={{ padding: '10px 12px', fontWeight: 600, color: T.ink }}>{pen.model}</td>
                       <td style={{ padding: '10px 12px', color: T.muted, fontWeight: 600, whiteSpace: 'nowrap' }}>{pen.type}</td>
                       <td style={{ padding: '10px 12px', color: T.muted, whiteSpace: 'nowrap' }}>{pen.length}mm</td>
-                      <td style={{ padding: '10px 12px', color: T.muted, whiteSpace: 'nowrap' }}>{pen.diameter}mm</td>
+                      <td style={{ padding: '10px 12px', color: T.muted, whiteSpace: 'nowrap' }}>{typeof pen.diameter === 'number' ? `${pen.diameter}mm` : '不明'}</td>
                       <td style={{ padding: '10px 12px' }}>
                         <a href={pen.amazonUrl} target="_blank" rel="noopener noreferrer" style={{ color: T.ink, fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 3, marginRight: 10 }}>
                           Amazon

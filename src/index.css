@@ -211,7 +211,7 @@ code {
   color: var(--brand-dark);
   padding: 20px;
   border-radius: 14px;
-  border: 0.5px solid var(--brand-border);
+  border: 1px solid var(--brand-border);
   background: #fff;
   box-shadow: none;
   transition:
@@ -225,8 +225,35 @@ code {
 
 .home-hero-tool-card:hover {
   border-color: var(--brand-border-md);
-  box-shadow: none;
+  box-shadow: 0 10px 24px rgba(61, 47, 31, 0.08);
   transform: translateY(-1px);
+  background: #fffaf4;
+}
+
+.home-hero-tool-card:focus-visible {
+  outline: 3px solid rgba(160, 120, 80, 0.24);
+  outline-offset: 3px;
+  border-color: var(--brand-primary);
+}
+
+.home-hero-tool-card:active {
+  background: var(--brand-surface);
+  border-color: var(--brand-primary);
+  transform: translateY(0);
+}
+
+.home-hero-tool-card:not(.home-hero-tool-card--primary, .home-hero-tool-card--disabled) {
+  border-color: var(--brand-border-md);
+  background: #fffaf4;
+}
+
+.home-hero-tool-card:not(.home-hero-tool-card--primary, .home-hero-tool-card--disabled):hover {
+  background: var(--brand-surface);
+  border-color: var(--brand-primary);
+}
+
+.home-hero-tool-card:not(.home-hero-tool-card--primary, .home-hero-tool-card--disabled):active {
+  background: #eadcc8;
 }
 
 .home-hero-tool-card--disabled {
@@ -250,16 +277,23 @@ code {
 .home-hero-tool-card--primary {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 16px;
-  background: #fff;
-  border-color: var(--brand-border);
+  gap: 18px;
+  min-height: 116px;
+  padding: 24px;
+  background: linear-gradient(135deg, #fff 0%, #fffaf4 100%);
+  border: 1.5px solid var(--brand-border-md);
   color: var(--brand-dark);
-  box-shadow: none;
+  box-shadow: 0 14px 34px rgba(61, 47, 31, 0.08);
 }
 
 .home-hero-tool-card--primary:hover {
-  background: #fff;
-  border-color: var(--brand-border-md);
+  background: var(--brand-surface);
+  border-color: var(--brand-primary);
+}
+
+.home-hero-tool-card--primary:active {
+  background: #eadcc8;
+  border-color: var(--brand-primary);
 }
 
 .home-hero-tool-card__icon-wrap {
@@ -275,11 +309,16 @@ code {
 }
 
 .home-hero-tool-card__icon-wrap--primary {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: var(--brand-surface);
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: #eadcc8;
   color: var(--brand-primary);
+}
+
+.home-hero-tool-card--primary .home-hero-tool-card__title {
+  font-size: 17px;
+  font-weight: 700;
 }
 
 .home-hero-tool-card__icon {
@@ -518,7 +557,8 @@ code {
   .home-hero-tool-card--primary {
     grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 12px;
-    min-height: 88px;
+    min-height: 104px;
+    padding: 20px;
   }
 
   .home-hero-tool-card--disabled {
@@ -555,8 +595,8 @@ code {
   }
 
   .home-hero-tool-card__icon-wrap--primary {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
   }
 
   .home-hero-tool-card__title {

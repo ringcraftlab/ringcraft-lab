@@ -1,4 +1,4 @@
-/** @typedef {{ id: number, type: string, brand: string, model: string, length: number, diameter: number, imageUrl: string, amazonUrl: string, rakutenUrl: string }} Pen */
+/** @typedef {{ id: number, type: string, brand: string, model: string, length: number, diameter: number | null, imageUrl: string, amazonUrl: string, rakutenUrl: string }} Pen */
 
 /**
  * @param {Pen[]} pens
@@ -15,7 +15,7 @@ export function filterPens(pens, filters) {
     if (filters.type.length > 0 && !filters.type.includes(pen.type)) return false;
     if (filters.brand.length > 0 && !filters.brand.includes(pen.brand)) return false;
     if (pen.length < filters.lengthRange[0] || pen.length > filters.lengthRange[1]) return false;
-    if (pen.diameter < filters.diameterRange[0] || pen.diameter > filters.diameterRange[1]) return false;
+    if (typeof pen.diameter === 'number' && (pen.diameter < filters.diameterRange[0] || pen.diameter > filters.diameterRange[1])) return false;
     if (filters.searchQuery.trim() !== '') {
       const q = filters.searchQuery.toLowerCase();
       const text = `${pen.brand} ${pen.model}`.toLowerCase();
@@ -38,6 +38,7 @@ export function getMinMaxLength(pens) {
 
 /** @param {Pen[]} pens */
 export function getMinMaxDiameter(pens) {
-  const d = pens.map((p) => p.diameter);
+  const d = pens.map((p) => p.diameter).filter((value) => typeof value === 'number');
+  if (d.length === 0) return [0, 20];
   return [Math.min(...d), Math.max(...d)];
 }

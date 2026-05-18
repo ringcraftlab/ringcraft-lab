@@ -13,6 +13,7 @@ export default function App() {
         <Route path="/refill-maker" element={<RefillMaker />} />
         <Route path="/goods" element={<Goods />} />
         <Route path="/goods/:category" element={<Goods />} />
+        <Route path="/goods/:category/:section" element={<Goods />} />
         <Route path="/pen-search" element={<PenSearch />} />
         <Route path="/pens" element={<Navigate to="/pen-search" replace />} />
       </Routes>

@@ -23,11 +23,12 @@ export const SIZES = [
     holePosY: [21.5, 40.5, 59.5, 110.5, 129.5, 148.5],
   },
   {
-    id: 'a5',
-    name: 'A5',
-    w: 148,
-    h: 210,
-    holePosY: [32, 51, 70, 140, 159, 178],
+    id: 'm5square',
+    name: 'M5スクエア',
+    shortName: 'M5スクエア',
+    w: 105,
+    h: 105,
+    holePosY: [14.5, 33.5, 52.5, 71.5, 90.5],
   },
   {
     id: 'custom',
@@ -44,7 +45,7 @@ export const HOLE_STANDARDS = [
   { id: 'microfive', name: 'マイクロ5穴' },
   { id: 'mini6',    name: 'ミニ6穴' },
   { id: 'bible',    name: 'バイブル穴' },
-  { id: 'a5',       name: 'A5穴' },
+  { id: 'm5square', name: 'M5スクエア穴' },
 ];
 
 export const A4 = {

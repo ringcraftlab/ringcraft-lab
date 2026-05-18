@@ -46,7 +46,7 @@ const TOOLS = [
     to: '/refill-maker?size=microfive',
     tag: 'リフィルメーカー',
     title: 'スクショや画像をリフィルサイズに並べて印刷',
-    desc: 'M5・M6・バイブル・A5に対応。穴位置はプリセット済み。A4に並べてそのまま印刷、PDFにも出力できます。',
+    desc: 'M5・M5スクエア・M6・バイブルに対応。穴位置はプリセット済み。A4に並べてそのまま印刷、PDFにも出力できます。',
     cta: '作りはじめる',
     main: true,
   },
@@ -62,9 +62,9 @@ const TOOLS = [
 
 const SIZES = [
   { id: 'microfive', label: 'M5', mm: '62 × 105', holes: 5 },
+  { id: 'm5square', label: 'M5 Square', mm: '105 × 105', holes: 5 },
   { id: 'mini6', label: 'M6', mm: '80 × 126', holes: 6 },
   { id: 'bible', label: 'Bible', mm: '95 × 170', holes: 6 },
-  { id: 'a5', label: 'A5', mm: '148 × 210', holes: 6 },
 ];
 
 export default function Home() {
@@ -103,7 +103,7 @@ export default function Home() {
 
       <section style={{ padding: 'clamp(56px,10vw,96px) clamp(16px,4vw,48px) clamp(40px,6vw,64px)', borderBottom: \`0.5px solid \${C.border}\` }}>
         <motionWrap style={{ maxWidth: 640 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: C.accent, margin: '0 0 20px' }}>M5 / M6 / BIBLE / A5</p>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: C.accent, margin: '0 0 20px' }}>M5 / M5 SQUARE / M6 / BIBLE</p>
           <h1 style={{ fontSize: 'clamp(28px,5vw,48px)', fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.02em', margin: '0 0 20px' }}>
             M5リフィルを、
             <br />
@@ -227,7 +227,7 @@ export default function Home() {
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                <RefillSVG holes={s.holes} scale={s.label === 'A5' ? 0.55 : s.label === 'Bible' ? 0.62 : 0.72} />
+                <RefillSVG holes={s.holes} scale={s.label === 'Bible' ? 0.62 : 0.72} />
                 <motionWrap style={{ textAlign: 'center' }}>
                   <motionWrap style={{ fontSize: 16, fontWeight: 800 }}>{s.label}</motionWrap>
                   <motionWrap style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{s.mm} mm</motionWrap>

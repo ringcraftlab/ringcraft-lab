@@ -10,7 +10,7 @@ import jsPDF from 'jspdf';
 const HOLE_ZONE_MM = 6.5;
 const IMAGE_START_MM = 6.7;
 
-const SIZE_QUERY_IDS = new Set(['microfive', 'mini6', 'bible', 'a5']);
+const SIZE_QUERY_IDS = new Set(['microfive', 'm5square', 'mini6', 'bible']);
 
 function initialSizeFromSearch() {
   if (typeof window === 'undefined') return 'microfive';
@@ -30,13 +30,16 @@ export default function RefillMaker() {
   const [fitMode, setFitMode] = useState('cover');
   const [imageFitModes, setImageFitModes] = useState({});
   const [imageRotations, setImageRotations] = useState({});
+  const [imageAreaMode, setImageAreaMode] = useState('avoid');
   const [showBorder, setShowBorder] = useState(true);
-  const [showHoles, setShowHoles] = useState(true);
+  const [showHoles, setShowHoles] = useState(false);
   const [notice, setNotice] = useState('');
   const [activeSlot, setActiveSlot] = useState(null);
   const [scale, setScale] = useState(0.5);
   const [printBusy, setPrintBusy] = useState(false);
+  const [printReady, setPrintReady] = useState(false);
   const [activeToolPanel, setActiveToolPanel] = useState('size');
+  const [settingsSheetOpen, setSettingsSheetOpen] = useState(false);
   const [isNarrow, setIsNarrow] = useState(false);
   const fileInputRef = useRef();
   const fileInputMultiRef = useRef();
@@ -97,8 +100,8 @@ export default function RefillMaker() {
       if (!previewWrapRef.current) return;
       const aw = previewWrapRef.current.clientWidth - (isNarrow ? 20 : 48);
       if (isNarrow) {
-        const ah = previewWrapRef.current.clientHeight - 70;
-        setScale(Math.min(aw / paperW_px, ah / paperH_px, 0.72));
+        const ah = previewWrapRef.current.clientHeight - 72;
+        setScale(Math.min(aw / paperW_px, ah / paperH_px, 0.58));
         return;
       }
       const ah = previewWrapRef.current.clientHeight - 100;
@@ -116,7 +119,7 @@ export default function RefillMaker() {
     setImageFitModes({});
     setImageRotations({});
     setOrientation('portrait');
-    if (id === 'microfive') setCustomHoleStandard('microfive');
+    if (id === 'microfive' || id === 'm5square') setCustomHoleStandard('microfive');
     if (isNarrow) {
       window.setTimeout(() => {
         sizeRowRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -281,76 +284,20 @@ export default function RefillMaker() {
   const cleanupPreparedPrint = useCallback(() => {
     const prepared = preparedPrintRef.current;
     preparedPrintRef.current = null;
+    setPrintReady(false);
     if (!prepared) return;
-    if (prepared.blobUrl) URL.revokeObjectURL(prepared.blobUrl);
+    if (prepared.printUrl) URL.revokeObjectURL(prepared.printUrl);
   }, []);
 
-  const isPreparedPrintCurrent = useCallback((prepared) => (
-    prepared
-    && prepared.images === images
-    && prepared.holePositions === holePositions
-    && prepared.imageFitModes === imageFitModes
-    && prepared.imageRotations === imageRotations
-    && prepared.showBorder === showBorder
-    && prepared.showHoles === showHoles
-    && prepared.sizeId === sizeId
-    && prepared.customW === customW
-    && prepared.customH === customH
-    && prepared.customHoleStandard === customHoleStandard
-    && prepared.orientation === orientation
-  ), [customH, customHoleStandard, customW, holePositions, imageFitModes, imageRotations, images, orientation, showBorder, showHoles, sizeId]);
   /**
    * PDF と同じキャプチャを A4 1枚に収めて印刷。
    * 自動印刷ブロックを避けるため、別タブに印刷用ページを開き、その中のボタンから印刷する。
    */
   const printSheet = useCallback(async () => {
     const prepared = preparedPrintRef.current;
-    if (prepared?.win && !prepared.win.closed && isPreparedPrintCurrent(prepared)) {
-      prepared.win.focus();
-      setNotice('開いた印刷用ページの「印刷する」を押してください。');
-      return;
-    }
-    if (prepared) cleanupPreparedPrint();
-
-    const printWin = window.open('', 'ringcraft-print');
-    if (!printWin) {
-      setNotice('印刷用ページを開けませんでした。PDF保存をお試しください。');
-      return;
-    }
-
-    setPrintBusy(true);
-    setNotice('印刷用データを準備しています。');
-    printWin.document.open();
-    printWin.document.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"/><title>RingCraft Lab 印刷</title>
-<style>
-  body {
-    margin: 0;
-    min-height: 100vh;
-    display: grid;
-    place-items: center;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans JP", sans-serif;
-    color: #3d2f1f;
-    background: #faf7f2;
-  }
-  p { margin: 0; font-size: 14px; }
-</style></head><body><p>印刷用データを準備しています...</p></body></html>`);
-    printWin.document.close();
-
-    const shot = await captureSheetPng();
-    if (!shot) {
-      setPrintBusy(false);
-      setNotice('印刷用データを作成できませんでした。');
-      printWin.close();
-      return;
-    }
-
     const pageWmm = orientation === 'portrait' ? 210 : 297;
     const pageHmm = orientation === 'portrait' ? 297 : 210;
-    const blob = await (await fetch(shot.dataUrl)).blob();
-    const blobUrl = URL.createObjectURL(blob);
-
-    const docMarkup = (imgSrc) => `<!DOCTYPE html>
+    const docMarkup = (imgSrc, pxW, pxH) => `<!DOCTYPE html>
 <html><head><meta charset="utf-8"/><title>RingCraft Lab 印刷</title>
 <style>
   @page { margin: 0; size: ${pageWmm}mm ${pageHmm}mm; }
@@ -427,19 +374,46 @@ export default function RefillMaker() {
     <button type="button" onclick="window.print()">印刷する</button>
     <span class="note">向きはアプリ側の「印刷向き」で変更してください</span>
   </div>
-  <div class="wrap"><img src="${imgSrc}" width="${shot.pxW}" height="${shot.pxH}" alt="" /></div>
+  <div class="wrap"><img src="${imgSrc}" width="${pxW}" height="${pxH}" alt="" /></div>
 </body></html>`;
 
-    printWin.document.open();
-    printWin.document.write(docMarkup(blobUrl));
-    printWin.document.close();
+    if (prepared?.dataUrl) {
+      const printWin = window.open('', '_blank');
+      if (!printWin) {
+        setNotice('印刷用ページを開けませんでした。PDF保存をお試しください。');
+        return;
+      }
+      const printUrl = URL.createObjectURL(new Blob(
+        [docMarkup(prepared.dataUrl, prepared.pxW, prepared.pxH)],
+        { type: 'text/html' }
+      ));
+      printWin.location.href = printUrl;
+      preparedPrintRef.current = { ...prepared, win: printWin, printUrl };
+      setPrintReady(false);
+      setNotice('印刷用ページを開きました。ページ内の「印刷する」を押してください。');
+      return;
+    }
+
+    if (prepared) cleanupPreparedPrint();
+
+    setPrintBusy(true);
+    setNotice('印刷用データを準備しています。');
+    const shot = await captureSheetPng();
+    if (!shot) {
+      setPrintBusy(false);
+      setNotice('印刷用データを作成できませんでした。');
+      return;
+    }
+
     preparedPrintRef.current = {
-      win: printWin,
-      blobUrl,
+      dataUrl: shot.dataUrl,
+      pxW: shot.pxW,
+      pxH: shot.pxH,
       images,
       holePositions,
       imageFitModes,
       imageRotations,
+      imageAreaMode,
       showBorder,
       showHoles,
       sizeId,
@@ -449,8 +423,9 @@ export default function RefillMaker() {
       orientation,
     };
     setPrintBusy(false);
-    setNotice('印刷用ページを開きました。ページ内の「印刷する」を押してください。');
-  }, [captureSheetPng, cleanupPreparedPrint, customH, customHoleStandard, customW, holePositions, imageFitModes, imageRotations, images, isPreparedPrintCurrent, orientation, showBorder, showHoles, sizeId]);
+    setPrintReady(true);
+    setNotice('印刷用データの準備ができました。もう一度「印刷用ページを開く」を押してください。');
+  }, [captureSheetPng, cleanupPreparedPrint, customH, customHoleStandard, customW, holePositions, imageAreaMode, imageFitModes, imageRotations, images, orientation, showBorder, showHoles, sizeId]);
 
   const clearAll = () => {
     if (!window.confirm('すべてクリアしますか？')) return;
@@ -514,7 +489,7 @@ export default function RefillMaker() {
         style={{ ...S.btn, ...S.btnPrimary, ...(printBusy ? { opacity: 0.85, cursor: 'wait' } : {}) }}
       >
         <span style={{ display: 'inline-flex', marginRight: 8, verticalAlign: -2 }}>{IcoPrint}</span>
-        {printBusy ? '印刷の準備中…' : '印刷'}
+        {printBusy ? '印刷の準備中…' : printReady ? '印刷用ページを開く' : '印刷'}
       </button>
       <button type="button" onClick={exportPDF} style={{ ...S.btn, ...S.btnGhostLine }}>
         <span style={{ display: 'inline-flex', marginRight: 8, verticalAlign: -2 }}>{IcoPdf}</span>
@@ -526,7 +501,7 @@ export default function RefillMaker() {
     </div>
   );
 
-  const fixedPresets = ['microfive', 'mini6', 'bible', 'a5']
+  const fixedPresets = ['microfive', 'm5square', 'mini6', 'bible']
     .map((id) => SIZES.find((s) => s.id === id))
     .filter(Boolean);
 
@@ -563,7 +538,7 @@ export default function RefillMaker() {
           ✓
         </span>
       ) : null}
-      <span style={{ fontSize: isNarrow ? 14 : 15, fontWeight: 500, lineHeight: 1.3, color: sizeId === s.id ? T.ink : 'inherit' }}>
+      <span style={{ fontSize: isNarrow && s.id === 'm5square' ? 12 : 15, fontWeight: 600, lineHeight: 1.25, color: sizeId === s.id ? T.ink : 'inherit' }}>
         {s.shortName || s.name}
       </span>
       {!isNarrow ? (
@@ -574,11 +549,14 @@ export default function RefillMaker() {
     </button>
   );
 
-  const renderLayoutIcon = (kind) => {
+  const renderLayoutIcon = (option) => {
+    const kind = option.id;
     const isLandscape = kind !== 'portrait';
     const width = isLandscape ? 34 : 24;
     const height = isLandscape ? 24 : 34;
-    const cells = kind === 'landscape' ? 4 : kind === 'portrait' ? 3 : kind === 'fold3' ? 3 : 4;
+    const iconCols = Math.max(option.iconCols || (kind === 'fold3' ? 3 : 4), 1);
+    const iconRows = Math.max(option.iconRows || 1, 1);
+    const cellCount = iconCols * iconRows;
     return (
       <span
         aria-hidden
@@ -588,21 +566,26 @@ export default function RefillMaker() {
           border: `0.5px solid ${T.borderStrong}`,
           borderRadius: 2,
           display: 'grid',
-          gridTemplateColumns: `repeat(${cells}, 1fr)`,
+          gridTemplateColumns: `repeat(${iconCols}, 1fr)`,
+          gridTemplateRows: `repeat(${iconRows}, 1fr)`,
           overflow: 'hidden',
           flexShrink: 0,
           background: '#fff',
         }}
       >
-        {Array.from({ length: cells }, (_, i) => (
+        {Array.from({ length: cellCount }, (_, i) => {
+          const col = i % iconCols;
+          const row = Math.floor(i / iconCols);
+          return (
           <span
             key={i}
             style={{
-              borderLeft: i > 0 ? `0.5px ${kind.startsWith('fold') ? 'dashed' : 'solid'} ${kind.startsWith('fold') ? T.primary : T.borderStrong}` : 'none',
-              borderTop: kind.startsWith('fold') ? `0.5px dashed ${T.borderStrong}` : 'none',
+              borderLeft: col > 0 ? `0.5px ${kind.startsWith('fold') ? 'dashed' : 'solid'} ${kind.startsWith('fold') ? T.primary : T.borderStrong}` : 'none',
+              borderTop: row > 0 ? `0.5px solid ${T.borderStrong}` : 'none',
             }}
           />
-        ))}
+          );
+        })}
       </span>
     );
   };
@@ -621,8 +604,8 @@ export default function RefillMaker() {
   }));
 
   const layoutOptions = [
-    { id: 'portrait', title: 'A4縦', detail: `${portraitLayout.total}枚`, active: orientation === 'portrait', onClick: () => { setOrientation('portrait'); setImages({}); setHolePositions({}); setImageFitModes({}); setImageRotations({}); } },
-    { id: 'landscape', title: 'A4横', detail: `${landscapeLayout.total}枚`, active: orientation === 'landscape', onClick: () => { setOrientation('landscape'); setImages({}); setHolePositions({}); setImageFitModes({}); setImageRotations({}); } },
+    { id: 'portrait', title: 'A4縦', detail: `${portraitLayout.total}枚`, iconCols: portraitLayout.cols, iconRows: portraitLayout.rows, active: orientation === 'portrait', onClick: () => { setOrientation('portrait'); setImages({}); setHolePositions({}); setImageFitModes({}); setImageRotations({}); } },
+    { id: 'landscape', title: 'A4横', detail: `${landscapeLayout.total}枚`, iconCols: landscapeLayout.cols, iconRows: landscapeLayout.rows, active: orientation === 'landscape', onClick: () => { setOrientation('landscape'); setImages({}); setHolePositions({}); setImageFitModes({}); setImageRotations({}); } },
     ...foldOptions.map((option) => ({
       id: option.id,
       title: option.title,
@@ -658,10 +641,10 @@ export default function RefillMaker() {
               ...(option.disabled ? S.layoutButtonDisabled : {}),
             }}
           >
-            {renderLayoutIcon(option.id)}
+            {renderLayoutIcon(option)}
             <span style={{ minWidth: 0, textAlign: 'left' }}>
-              <span style={{ display: 'block', fontSize: 15, fontWeight: 600, lineHeight: 1.25, color: T.ink }}>{option.title}</span>
-              <span style={{ display: 'block', marginTop: 3, fontSize: 12, lineHeight: 1.3, color: T.muted }}>{option.detail}</span>
+                <span style={{ display: 'block', fontSize: isNarrow ? 16 : 15, fontWeight: 600, lineHeight: 1.25, color: T.ink }}>{option.title}</span>
+                <span style={{ display: 'block', marginTop: 3, fontSize: isNarrow ? 13 : 12, lineHeight: 1.3, color: T.muted }}>{option.detail}</span>
             </span>
           </button>
         ))}
@@ -729,7 +712,7 @@ export default function RefillMaker() {
 
   const holesBlockInner = (
     <>
-      <p style={{ fontSize: 13, color: T.muted, margin: '0 0 14px', lineHeight: 1.7 }}>
+      <p style={{ fontSize: isNarrow ? 14 : 13, color: T.muted, margin: '0 0 14px', lineHeight: 1.7 }}>
         すべての枠の穴位置をまとめて変更できます。個別に変えたい場合は「画像追加」の各カードで調整できます。
       </p>
       <div style={{ display: 'flex', gap: 12 }}>
@@ -739,6 +722,15 @@ export default function RefillMaker() {
         <button type="button" onClick={() => setAllHoles('right')} style={{ ...S.pill, flex: 1, justifyContent: 'center' }}>
           すべて右
         </button>
+      </div>
+      <div style={{ marginTop: 18, paddingTop: 16, borderTop: `0.5px solid ${T.border}` }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: isNarrow ? 14 : 13, cursor: 'pointer' }}>
+          <input type="checkbox" checked={showHoles} onChange={(e) => setShowHoles(e.target.checked)} />
+          穴あけガイドを表示・印刷する
+        </label>
+        <p style={{ margin: '6px 0 0 26px', fontSize: isNarrow ? 13 : 12, color: T.hint, lineHeight: 1.6 }}>
+          ONにすると、プレビューと印刷/PDFの両方に薄い丸印を入れます。プリンターやパンチにより位置がずれる場合があります。
+        </p>
       </div>
     </>
   );
@@ -753,13 +745,60 @@ export default function RefillMaker() {
           <option value="fill">引き伸ばし</option>
         </select>
       </div>
+      <div>
+        <div style={{ margin: '4px 0 10px', fontSize: isNarrow ? 15 : 13, color: T.ink, fontWeight: 600 }}>画像範囲</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {[
+            {
+              id: 'avoid',
+              title: '穴を避ける',
+              desc: '穴位置を空けて配置',
+              icon: (
+                <span aria-hidden style={{ width: 32, height: 42, border: `1px solid ${T.borderStrong}`, borderRadius: 3, display: 'flex', alignItems: 'stretch', overflow: 'hidden', background: '#fff' }}>
+                  <span style={{ width: 8, borderRight: `1px dashed ${T.hole}`, background: T.previewBg }} />
+                  <span style={{ flex: 1, margin: 4, border: `1px solid ${T.borderStrong}`, borderRadius: 2 }} />
+                </span>
+              ),
+            },
+            {
+              id: 'full',
+              title: '全面に印刷',
+              desc: '穴位置まで画像を配置',
+              icon: (
+                <span aria-hidden style={{ width: 32, height: 42, border: `1px solid ${T.borderStrong}`, borderRadius: 3, position: 'relative', display: 'block', overflow: 'hidden', background: '#fff' }}>
+                  <span style={{ position: 'absolute', inset: 4, border: `1px solid ${T.borderStrong}`, borderRadius: 2 }} />
+                  <span style={{ position: 'absolute', left: 5, top: 8, width: 5, height: 5, borderRadius: '50%', border: `1px solid ${T.hole}`, background: '#fff' }} />
+                  <span style={{ position: 'absolute', left: 5, top: 18, width: 5, height: 5, borderRadius: '50%', border: `1px solid ${T.hole}`, background: '#fff' }} />
+                </span>
+              ),
+            },
+          ].map((option) => {
+            const active = imageAreaMode === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => { setImageAreaMode(option.id); cleanupPreparedPrint(); }}
+                style={{
+                  ...S.layoutButton,
+                  minHeight: 88,
+                  alignItems: 'center',
+                  ...(active ? S.layoutButtonActive : {}),
+                }}
+              >
+                {option.icon}
+                <span style={{ textAlign: 'left', minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: isNarrow ? 15 : 14, fontWeight: 600, color: T.ink, lineHeight: 1.3 }}>{option.title}</span>
+                  <span style={{ display: 'block', marginTop: 3, fontSize: isNarrow ? 12 : 11, color: T.muted, lineHeight: 1.45 }}>{option.desc}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
       <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, cursor: 'pointer' }}>
         <input type="checkbox" checked={showBorder} onChange={(e) => setShowBorder(e.target.checked)} />
         カット線を表示
-      </label>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, cursor: 'pointer' }}>
-        <input type="checkbox" checked={showHoles} onChange={(e) => setShowHoles(e.target.checked)} />
-        穴あけガイドを表示
       </label>
     </div>
   );
@@ -787,19 +826,19 @@ export default function RefillMaker() {
   const imagesBlockInner = (
     <>
       {notice && (
-        <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 8, background: T.primaryLight, border: `0.5px solid ${T.border}`, fontSize: 13, color: T.inkSoft, lineHeight: 1.65 }}>
+        <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 8, background: T.primaryLight, border: `0.5px solid ${T.border}`, fontSize: isNarrow ? 14 : 13, color: T.inkSoft, lineHeight: 1.65 }}>
           {notice}
         </div>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-        <button type="button" onClick={() => fileInputMultiRef.current.click()} style={{ ...S.btn, ...S.btnGhostLine, margin: 0, fontSize: 14 }}>
+        <button type="button" onClick={() => fileInputMultiRef.current.click()} style={{ ...S.btn, ...S.btnGhostLine, margin: 0, fontSize: isNarrow ? 15 : 14 }}>
           まとめて選択
         </button>
-        <button type="button" onClick={() => fileInputFillRef.current.click()} style={{ ...S.btn, ...S.btnGhostLine, margin: 0, fontSize: 14 }}>
+        <button type="button" onClick={() => fileInputFillRef.current.click()} style={{ ...S.btn, ...S.btnGhostLine, margin: 0, fontSize: isNarrow ? 15 : 14 }}>
           1枚を全枠へ
         </button>
       </div>
-      <p style={{ margin: '0 0 18px', fontSize: 13, color: T.muted, lineHeight: 1.7 }}>
+      <p style={{ margin: '0 0 18px', fontSize: isNarrow ? 14 : 13, color: T.muted, lineHeight: 1.7 }}>
         まとめて選択は最大{total}枚まで使います。多く選んだ場合は先頭{total}枚だけ配置します。
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? '1fr' : `repeat(${Math.min(cols, 3)}, minmax(0, 1fr))`, gap: 16 }}>
@@ -842,19 +881,19 @@ export default function RefillMaker() {
                     style={rotatedImageStyle(images[i], slotFit, rotation, refillW, refillH)}
                   />
                 ) : (
-                  <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: T.hole, lineHeight: 1 }}>
-                    <span style={{ width: 34, height: 34, borderRadius: '50%', background: '#fff', border: `0.5px solid ${T.border}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 25, fontWeight: 400 }}>＋</span>
-                    <span style={{ fontSize: 10, color: T.hint, fontWeight: 600 }}>画像</span>
+                  <span style={{ display: 'inline-flex', flexDirection: isNarrow ? 'row' : 'column', alignItems: 'center', justifyContent: 'center', gap: isNarrow ? 8 : 5, color: T.hole, lineHeight: 1 }}>
+                    <span style={{ width: isNarrow ? 40 : 36, height: isNarrow ? 40 : 36, borderRadius: '50%', background: '#fff', border: `1px solid ${T.border}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: isNarrow ? 30 : 26, fontWeight: 500 }}>＋</span>
+                    <span style={{ fontSize: isNarrow ? 16 : 10, color: T.hint, fontWeight: 700 }}>追加</span>
                   </span>
                 )}
-                <span style={{ position: 'absolute', left: 6, top: 6, padding: '2px 6px', borderRadius: 999, background: 'rgba(255,255,255,0.9)', color: T.hint, fontSize: 10, fontWeight: 700 }}>
+                <span style={{ position: 'absolute', left: 6, top: 6, padding: '2px 7px', borderRadius: 999, background: 'rgba(255,255,255,0.9)', color: T.hint, fontSize: isNarrow ? 12 : 10, fontWeight: 700 }}>
                   {i + 1}
                 </span>
               </button>
               <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                  <span style={{ fontSize: 13, color: T.ink, fontWeight: 600 }}>穴位置</span>
-                  <span style={{ fontSize: 12, color: T.muted }}>
+                  <span style={{ fontSize: isNarrow ? 15 : 13, color: T.ink, fontWeight: 600 }}>穴位置</span>
+                  <span style={{ fontSize: isNarrow ? 14 : 12, color: T.muted }}>
                     現在: {hole === 'left' ? '左' : '右'}
                   </span>
                 </div>
@@ -874,15 +913,15 @@ export default function RefillMaker() {
                   ))}
                 </div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 34, fontSize: 13, color: T.muted }}>表示</span>
-                  <select value={slotFit} onChange={(e) => setSlotFit(i, e.target.value)} style={{ ...S.select, flex: 1, fontSize: 13 }}>
+                  <span style={{ width: 44, fontSize: isNarrow ? 15 : 13, color: T.muted }}>表示</span>
+                  <select value={slotFit} onChange={(e) => setSlotFit(i, e.target.value)} style={{ ...S.select, flex: 1, fontSize: isNarrow ? 15 : 13 }}>
                     <option value="cover">トリミング</option>
                     <option value="contain">全体表示</option>
                     <option value="fill">引き伸ばし</option>
                   </select>
                 </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 34, fontSize: 13, color: T.muted }}>回転</span>
+                  <span style={{ width: 44, fontSize: isNarrow ? 15 : 13, color: T.muted }}>回転</span>
                   <button
                     type="button"
                     disabled={!images[i]}
@@ -891,7 +930,7 @@ export default function RefillMaker() {
                   >
                     90°回転
                   </button>
-                  <span style={{ minWidth: 42, fontSize: 12, color: T.hint, textAlign: 'right' }}>
+                  <span style={{ minWidth: 42, fontSize: isNarrow ? 14 : 12, color: T.hint, textAlign: 'right' }}>
                     {rotation}°
                   </span>
                 </div>
@@ -917,9 +956,6 @@ export default function RefillMaker() {
           );
         })}
       </div>
-      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileInput} />
-      <input ref={fileInputMultiRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleMultiInput} />
-      <input ref={fileInputFillRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFillInput} />
     </>
   );
 
@@ -977,7 +1013,7 @@ export default function RefillMaker() {
               background: 'transparent',
               boxShadow: 'none',
               color: active ? T.ink : T.hint,
-              fontSize: compact ? 12 : 13,
+              fontSize: compact ? 14 : 13,
               fontWeight: active ? 500 : 400,
               borderBottom: active ? `2px solid ${T.primary}` : '2px solid transparent',
             }}
@@ -1005,11 +1041,11 @@ export default function RefillMaker() {
             margin: '0 0 10px',
             display: 'inline-flex',
             alignSelf: 'center',
-            padding: '6px 12px',
+            padding: '7px 13px',
             borderRadius: 999,
             background: '#fff',
             border: `1px solid ${T.border}`,
-            fontSize: 11,
+            fontSize: isNarrow ? 13 : 11,
             lineHeight: 1.35,
             color: T.inkSoft,
             boxShadow: 'none',
@@ -1023,7 +1059,19 @@ export default function RefillMaker() {
           {orientation === 'portrait' ? 'A4縦' : 'A4横'} · 表示{Math.round(scale * 100)}% · {sizeLabel}サイズ
         </p>
       )}
-      <div style={{ width: paperW_px * scale, height: paperH_px * scale, flexShrink: 0, position: 'relative', margin: '0 auto' }}>
+      <div
+        style={{
+          width: paperW_px * scale,
+          height: paperH_px * scale,
+          flexShrink: 0,
+          position: 'relative',
+          margin: '0 auto',
+          background: '#fff',
+          border: `1px solid ${T.borderStrong}`,
+          boxShadow: '0 0 0 1px rgba(255,255,255,0.8)',
+          boxSizing: 'content-box',
+        }}
+      >
         <div
           ref={sheetRef}
           id="print-sheet"
@@ -1048,7 +1096,13 @@ export default function RefillMaker() {
             const hPos = holePositions[i] || 'left';
             const slotFit = imageFitModes[i] || fitMode;
             const rotation = imageRotations[i] || 0;
-            const imageAreaW_px = refillW_px - imageStart_px;
+            const avoidsHole = imageAreaMode === 'avoid';
+            const imageAreaW_px = avoidsHole ? refillW_px - imageStart_px : refillW_px;
+            const imageAreaPreviewBg = 'rgba(245, 237, 224, 0.42)';
+            const holeZonePreviewBg = avoidsHole ? '#fff' : 'transparent';
+            const holeZoneBorder = avoidsHole
+              ? `0.5px dashed ${T.borderStrong}`
+              : `0.5px dashed rgba(224, 217, 207, 0.55)`;
 
             return (
               <div
@@ -1064,57 +1118,69 @@ export default function RefillMaker() {
                   height: refillH_px,
                   border: showBorder ? `0.5px solid ${T.border}` : '0.5px solid transparent',
                   overflow: 'hidden',
-                  background: T.sidebar,
+                  background: avoidsHole ? '#fff' : imageAreaPreviewBg,
                   cursor: 'pointer',
                   boxSizing: 'border-box',
                 }}
               >
-                {showHoles && (
-                  <div
-                    data-refill="hole-zone"
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      bottom: 0,
-                      [hPos]: 0,
-                      width: holeZone_px,
-                      background: T.sidebar,
-                      borderRight: hPos === 'left' ? `0.5px dashed ${T.hole}` : 'none',
-                      borderLeft: hPos === 'right' ? `0.5px dashed ${T.hole}` : 'none',
-                      zIndex: 2,
-                    }}
-                  >
-                    {holePosArr.map((posY, hi) => (
-                      <div
-                        key={hi}
-                        style={{
-                          position: 'absolute',
-                          top: posY * PX - 6,
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          width: 12,
-                          height: 12,
-                          borderRadius: '50%',
-                          border: `0.5px solid ${T.hole}`,
-                          background: T.sidebar,
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
+                <div
+                  data-refill="hole-zone"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    [hPos]: 0,
+                    width: holeZone_px,
+                    background: holeZonePreviewBg,
+                    borderRight: hPos === 'left' ? holeZoneBorder : 'none',
+                    borderLeft: hPos === 'right' ? holeZoneBorder : 'none',
+                    zIndex: 2,
+                  }}
+                >
+                  {showHoles && holePosArr.map((posY, hi) => (
+                    <div
+                      key={hi}
+                      style={{
+                        position: 'absolute',
+                        top: posY * PX - 6,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        border: `1px solid ${T.hole}`,
+                        background: 'transparent',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  ))}
+                </div>
                 <div
                   style={{
                     position: 'absolute',
                     top: 0,
                     bottom: 0,
-                    left: hPos === 'left' ? imageStart_px : 0,
-                    right: hPos === 'right' ? imageStart_px : 0,
+                    left: avoidsHole && hPos === 'left' ? imageStart_px : 0,
+                    right: avoidsHole && hPos === 'right' ? imageStart_px : 0,
                     overflow: 'hidden',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    background: imageAreaPreviewBg,
                   }}
                 >
+                  <div
+                    className="refill-capture-hide"
+                    aria-hidden
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      border: `1px dashed ${avoidsHole ? T.borderStrong : T.border}`,
+                      boxSizing: 'border-box',
+                      pointerEvents: 'none',
+                      zIndex: 4,
+                    }}
+                  />
                   {images[i] ? (
                     <div
                       role="img"
@@ -1123,14 +1189,14 @@ export default function RefillMaker() {
                     />
                   ) : (
                     <>
-                      <span className="refill-capture-hide" style={{ position: 'absolute', left: 7, top: 5, fontFamily: 'system-ui, sans-serif', fontSize: 10, color: T.hint, fontWeight: 500, zIndex: 3 }}>
+                      <span className="refill-capture-hide" style={{ position: 'absolute', left: 7, top: 5, fontFamily: 'system-ui, sans-serif', fontSize: isNarrow ? 12 : 10, color: T.hint, fontWeight: 600, zIndex: 3 }}>
                         {i + 1}
                       </span>
-                      <span className="refill-capture-hide" style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 4, fontFamily: 'system-ui, sans-serif', color: T.hole, lineHeight: 1 }}>
-                        <span style={{ width: 34, height: 34, borderRadius: '50%', background: '#fff', border: `0.5px solid ${T.border}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 400 }}>
+                      <span className="refill-capture-hide" style={{ display: 'inline-flex', flexDirection: isNarrow ? 'row' : 'column', alignItems: 'center', gap: isNarrow ? 8 : 4, fontFamily: 'system-ui, sans-serif', color: T.hole, lineHeight: 1 }}>
+                        <span style={{ width: isNarrow ? 40 : 34, height: isNarrow ? 40 : 34, borderRadius: '50%', background: '#fff', border: `1px solid ${T.border}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: isNarrow ? 30 : 24, fontWeight: 500 }}>
                           ＋
                         </span>
-                        <span style={{ fontSize: 10, color: T.hint, fontWeight: 600 }}>画像</span>
+                        <span style={{ fontSize: isNarrow ? 16 : 10, color: T.hint, fontWeight: 700 }}>追加</span>
                       </span>
                     </>
                   )}
@@ -1172,10 +1238,34 @@ export default function RefillMaker() {
         boxShadow: 'none',
       }}
     >
-      <p style={{ margin: '0 0 8px', fontSize: 11, lineHeight: 1.5, color: T.hint, textAlign: 'center' }}>
-        向きはアプリ側の「用紙向き」で変更してください。
-      </p>
-      <div style={{ display: 'flex', gap: 12 }}>
+      {!settingsSheetOpen && (
+        <button
+          type="button"
+          onClick={() => setSettingsSheetOpen(true)}
+          style={{
+            display: 'block',
+            width: '100%',
+            border: 'none',
+            background: 'transparent',
+            padding: '0 0 10px',
+            color: T.hint,
+            fontFamily: T.font,
+            fontSize: 13,
+            lineHeight: 1.45,
+          }}
+        >
+          <span style={{ display: 'block', width: 42, height: 4, borderRadius: 999, background: T.borderStrong, margin: '0 auto 7px', opacity: 0.8 }} />
+          設定からサイズ・画像・詳細を変更できます
+        </button>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1fr 1fr', gap: 10 }}>
+        <button
+          type="button"
+          onClick={() => setSettingsSheetOpen(true)}
+          style={{ ...S.btn, ...S.btnGhostLine, margin: 0 }}
+        >
+          設定
+        </button>
         <button
           type="button"
           disabled={printBusy}
@@ -1189,7 +1279,7 @@ export default function RefillMaker() {
             ...(printBusy ? { opacity: 0.85, cursor: 'wait' } : {}),
           }}
         >
-          {printBusy ? '準備中…' : '印刷'}
+          {printBusy ? '準備中…' : printReady ? '印刷用ページを開く' : '印刷'}
         </button>
         <button
           type="button"
@@ -1254,19 +1344,21 @@ export default function RefillMaker() {
           <div
             style={{
               flex: 1,
-              overflowY: 'auto',
+              overflow: 'hidden',
               minHeight: 0,
               WebkitOverflowScrolling: 'touch',
-              paddingBottom: 'calc(150px + env(safe-area-inset-bottom, 0px))',
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
             <div
               ref={previewWrapRef}
               style={{
-                minHeight: 'min(54vh, 460px)',
+                flex: 1,
+                minHeight: 0,
                 overflow: 'auto',
                 background: T.previewBg,
-                padding: '10px 10px 14px',
+                padding: '22px 10px 18px',
                 borderBottom: `0.5px solid ${T.border}`,
                 display: 'flex',
                 flexDirection: 'column',
@@ -1274,34 +1366,81 @@ export default function RefillMaker() {
                 justifyContent: 'center',
               }}
             >
-              {renderPreviewPanel({ hideHeader: true, compact: true })}
+              <div style={{ transform: 'translateY(8px)' }}>
+                {renderPreviewPanel({ hideHeader: true, compact: true })}
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => document.getElementById('refill-settings')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          </div>
+          {settingsSheetOpen && (
+            <div
+              role="presentation"
+              onClick={() => setSettingsSheetOpen(false)}
               style={{
-                display: 'block',
-                width: '100%',
-                border: 'none',
-                background: '#fff',
-                padding: '10px 16px 8px',
-                color: T.primary,
-                fontFamily: T.font,
-                fontSize: 11,
-                fontWeight: 500,
-                textAlign: 'center',
+                position: 'fixed',
+                inset: 0,
+                zIndex: 20,
+                background: 'rgba(61, 47, 31, 0.24)',
               }}
-            >
-              ↓ 設定へスクロール
-            </button>
-            <div id="refill-settings" style={{ padding: '8px 16px 8px', maxWidth: 560, margin: '0 auto' }}>
+            />
+          )}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="設定"
+            style={{
+              position: 'fixed',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 21,
+              height: 'min(72vh, 620px)',
+              transform: settingsSheetOpen ? 'translateY(0)' : 'translateY(calc(100% + 16px))',
+              transition: 'transform 0.22s ease',
+              background: '#fff',
+              borderTop: `1px solid ${T.border}`,
+              borderTopLeftRadius: 18,
+              borderTopRightRadius: 18,
+              boxShadow: '0 -12px 32px rgba(61, 47, 31, 0.18)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            }}
+          >
+            <div style={{ flexShrink: 0, padding: '10px 16px 0' }}>
+              <div style={{ width: 42, height: 4, borderRadius: 999, background: T.border, margin: '0 auto 12px' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: T.ink }}>設定</div>
+                <button
+                  type="button"
+                  onClick={() => setSettingsSheetOpen(false)}
+                  style={{
+                    border: 'none',
+                    background: T.primaryLight,
+                    color: T.ink,
+                    borderRadius: 999,
+                    minHeight: 36,
+                    padding: '0 14px',
+                    fontFamily: T.font,
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  閉じる
+                </button>
+              </div>
               {renderPanelNav(true)}
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0 16px 18px' }}>
               {controlPanelContent[activeToolPanel]}
             </div>
           </div>
           {mobileStickyBar}
         </div>
       )}
+      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileInput} />
+      <input ref={fileInputMultiRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleMultiInput} />
+      <input ref={fileInputFillRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFillInput} />
     </div>
   );
 }
@@ -1335,7 +1474,7 @@ function GroupCard({ title, icon, children }) {
         >
           {icon}
         </span>
-        <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: '0.01em', color: T.ink }}>{title}</span>
+        <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '0.01em', color: T.ink }}>{title}</span>
       </div>
       {children}
     </section>
@@ -1374,7 +1513,7 @@ const S = {
   },
   sizeGridButton: {
     width: '100%',
-    minHeight: 52,
+    minHeight: 56,
     padding: '10px 4px',
     borderRadius: 8,
     border: '0.5px solid var(--brand-border-md)',
@@ -1392,7 +1531,7 @@ const S = {
   },
   layoutButton: {
     width: '100%',
-    minHeight: 70,
+    minHeight: 74,
     padding: '9px 8px',
     borderRadius: 8,
     border: '0.5px solid var(--brand-border-md)',
@@ -1436,14 +1575,14 @@ const S = {
   },
   smallToggle: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 46,
     padding: '8px 10px',
     borderRadius: 8,
     border: '0.5px solid var(--brand-border-md)',
     background: '#fff',
     color: T.muted,
     cursor: 'pointer',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 600,
     fontFamily: T.font,
   },
@@ -1454,14 +1593,14 @@ const S = {
   },
   smallAction: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 46,
     padding: '9px 10px',
     borderRadius: 8,
     border: '0.5px solid var(--brand-border-md)',
     background: '#fff',
     color: T.inkSoft,
     cursor: 'pointer',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 600,
     fontFamily: T.font,
   },
@@ -1474,7 +1613,7 @@ const S = {
     padding: 13,
     border: 'none',
     borderRadius: 8,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 500,
     cursor: 'pointer',
     fontFamily: T.font,

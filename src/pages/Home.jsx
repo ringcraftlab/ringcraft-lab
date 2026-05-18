@@ -111,7 +111,7 @@ export default function Home() {
             <p className="home-copy__stanza">
               画像を並べて、A4で印刷。
               <br />
-              M5・M6・バイブル・A5に対応。
+              M5・M5スクエア・M6・バイブルに対応。
             </p>
             <p className="home-copy__closing">
               手帳づくりの時間を、少しだけ心地よく。
